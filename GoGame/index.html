@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>弈 · 围棋教学对弈</title>
+  <meta name="description" content="弈 —— 水墨风格围棋教学与对弈游戏。零基础七课入门，人机对弈、双人对弈、让子棋与数子法终局。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23d9a95f'/%3E%3Ccircle cx='24' cy='24' r='11' fill='%23141414'/%3E%3Ccircle cx='42' cy='42' r='11' fill='%23f2ecdc'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- 字体非阻塞加载：离线/被墙时也不影响应用启动 -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet"></noscript>
+  <link rel="stylesheet" href="css/style.css?v=3">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ============ 首页 ============ -->
+    <section class="screen" id="screen-home">
+      <div class="home-bg" aria-hidden="true">
+        <svg class="mountains" viewBox="0 0 1440 420" preserveAspectRatio="xMidYMax slice">
+          <path class="m3" d="M0,300 C180,250 340,290 520,260 C700,230 840,180 1020,220 C1200,260 1320,240 1440,200 L1440,420 L0,420 Z"/>
+          <path class="m2" d="M0,340 C220,300 420,330 640,310 C860,290 1040,250 1240,290 C1340,310 1400,320 1440,315 L1440,420 L0,420 Z"/>
+          <path class="m1" d="M0,380 C260,355 480,370 720,362 C960,354 1200,340 1440,360 L1440,420 L0,420 Z"/>
+        </svg>
+        <div class="mist mist-a"></div>
+        <div class="mist mist-b"></div>
+        <div class="float-stone fs-black"></div>
+        <div class="float-stone fs-white"></div>
+      </div>
+
+      <header class="home-top rise d1">
+        <span class="brand">弈 <i>·</i> YI</span>
+        <span class="home-motto">以棋会友 · 落子无悔</span>
+      </header>
+
+      <div class="home-stage">
+        <div class="hero-char rise d2">弈</div>
+        <div class="hero-seal rise d3">手谈</div>
+        <div class="hero-poem rise d3">黑白之间 · 方寸之上</div>
+        <div class="hero-quote rise d4">胜固欣然，败亦可喜</div>
+
+        <nav class="home-menu rise d5">
+          <button id="btn-go-play" class="menu-item">
+            <span class="mi-char">对弈</span>
+            <span class="mi-line"></span>
+            <span class="mi-latin">PLAY GO</span>
+          </button>
+          <button id="btn-go-learn" class="menu-item">
+            <span class="mi-char">学弈</span>
+            <span class="mi-line"></span>
+            <span class="mi-latin">LEARN GO</span>
+          </button>
+        </nav>
+
+        <p class="home-sub rise d6">七课入门 · 人机对弈 · 双人手谈 · 让子与数目</p>
+        <p class="home-credit rise d6">Made by GLM 5.3</p>
+      </div>
+    </section>
+
+    <!-- ============ 对局设置 ============ -->
+    <section class="screen" id="screen-setup">
+      <span class="ghost-char" aria-hidden="true">局</span>
+      <header class="screen-head">
+        <button class="btn-ghost back-home">‹ 首页</button>
+        <h2 class="screen-title">对局设置</h2>
+        <span class="head-rule"></span>
+      </header>
+
+      <div class="setup-panel">
+        <div class="field">
+          <label class="field-label">对局方式</label>
+          <div class="seg">
+            <label><input type="radio" name="mode" value="ai" checked><span>人机对弈</span></label>
+            <label><input type="radio" name="mode" value="pvp"><span>双人对弈</span></label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">棋盘</label>
+          <div class="seg">
+            <label><input type="radio" name="size" value="9" checked><span>九路<small>入门</small></span></label>
+            <label><input type="radio" name="size" value="13"><span>十三路<small>进阶</small></span></label>
+            <label><input type="radio" name="size" value="19"><span>十九路<small>标准</small></span></label>
+          </div>
+        </div>
+
+        <div class="field" id="level-group">
+          <label class="field-label">对手棋力</label>
+          <div class="seg">
+            <label><input type="radio" name="level" value="0"><span>入门</span></label>
+            <label><input type="radio" name="level" value="1" checked><span>初级</span></label>
+            <label><input type="radio" name="level" value="2"><span>中级</span></label>
+            <label><input type="radio" name="level" value="3"><span>高级</span></label>
+          </div>
+        </div>
+
+        <div class="field" id="color-group">
+          <label class="field-label">执子</label>
+          <div class="seg">
+            <label><input type="radio" name="color" value="black" checked><span>执黑 · 先行</span></label>
+            <label><input type="radio" name="color" value="white"><span>执白 · 后行</span></label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="handicap-sel">让子</label>
+          <select id="handicap-sel" class="sel"></select>
+        </div>
+
+        <p class="setup-note" id="setup-komi"></p>
+
+        <button id="btn-start" class="btn btn-primary btn-big">落 子 · BEGIN</button>
+      </div>
+    </section>
+
+    <!-- ============ 对弈 ============ -->
+    <section class="screen" id="screen-game">
+      <header class="game-head">
+        <button id="btn-game-home" class="btn-ghost">‹ 首页</button>
+        <div class="game-title">对 局 <em id="move-count">0</em></div>
+        <span id="rule-note" class="rule-note"></span>
+      </header>
+
+      <div class="game-main">
+        <div class="board-wrap" id="game-board-wrap">
+          <canvas id="game-board"></canvas>
+        </div>
+
+        <aside class="game-side">
+          <div class="player-card" id="player-black">
+            <span class="stone-ic black"></span>
+            <div class="pinfo">
+              <span class="pname">黑方</span>
+              <span class="turn-tag"></span>
+            </div>
+            <span class="pcap">提子 <b id="cap-b">0</b></span>
+          </div>
+          <div class="player-card" id="player-white">
+            <span class="stone-ic white"></span>
+            <div class="pinfo">
+              <span class="pname">白方</span>
+              <span class="turn-tag"></span>
+            </div>
+            <span class="pcap">提子 <b id="cap-w">0</b></span>
+          </div>
+
+          <div id="ai-thinking" class="thinking">对方思索中<span class="dots">…</span></div>
+
+          <div class="ctrl-grid">
+            <button id="btn-undo" class="btn">悔棋</button>
+            <button id="btn-pass" class="btn">停一手</button>
+            <button id="btn-resign" class="btn">认输</button>
+            <button id="btn-score" class="btn">数子</button>
+          </div>
+
+          <div id="score-bar" class="score-bar">
+            <div class="score-hint">点击棋子标记死子</div>
+            <div id="score-live" class="score-live"></div>
+            <div class="score-actions">
+              <button id="btn-score-resume" class="btn">继续对局</button>
+              <button id="btn-score-confirm" class="btn btn-primary">确认结算</button>
+            </div>
+          </div>
+
+          <div class="panel-opts">
+            <label class="switch-row"><span>坐标</span><input type="checkbox" id="tg-coords" checked><i></i></label>
+            <label class="switch-row"><span>手数</span><input type="checkbox" id="tg-numbers"><i></i></label>
+            <label class="switch-row"><span>音效</span><input type="checkbox" id="tg-sound" checked><i></i></label>
+          </div>
+
+          <div class="panel-log">
+            <div class="panel-cap">棋谱</div>
+            <div id="move-log"></div>
+          </div>
+
+          <button id="btn-newgame" class="btn btn-wide">新对局</button>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ============ 学弈 · 课程列表 ============ -->
+    <section class="screen" id="screen-learn">
+      <span class="ghost-char" aria-hidden="true">学</span>
+      <header class="screen-head">
+        <button id="btn-learn-back" class="btn-ghost">‹ 首页</button>
+        <h2 class="screen-title">学弈 <em>入门七课</em></h2>
+        <span class="head-rule"></span>
+      </header>
+      <div id="lesson-list" class="lesson-list"></div>
+    </section>
+
+    <!-- ============ 课程播放 ============ -->
+    <section class="screen" id="screen-lesson">
+      <header class="game-head">
+        <button id="btn-ls-exit" class="btn-ghost">‹ 课程</button>
+        <div class="game-title" id="lesson-chapter">第一章</div>
+        <div id="lesson-nav" class="lesson-nav"></div>
+      </header>
+
+      <div class="game-main">
+        <div class="board-wrap" id="lesson-board-wrap">
+          <canvas id="lesson-board"></canvas>
+          <div id="lesson-stamp" class="stamp"><span>正解</span></div>
+        </div>
+
+        <aside class="game-side lesson-side">
+          <div id="lesson-goal" class="goal-chip"></div>
+          <div id="lesson-text" class="lesson-text"></div>
+          <div id="lesson-hint" class="lesson-hint"></div>
+          <div id="lesson-step-dots" class="step-dots"></div>
+          <div class="ls-actions">
+            <button id="btn-ls-retry" class="btn">重来</button>
+            <button id="btn-ls-hint" class="btn">提示</button>
+            <button id="btn-ls-prev" class="btn">上一步</button>
+            <button id="btn-ls-next" class="btn btn-primary">下一步</button>
+          </div>
+          <div id="lesson-count" class="lesson-count"></div>
+        </aside>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast-root"></div>
+  <div id="modal-root"></div>
+
+  <script src="js/engine.js?v=3"></script>
+  <script src="js/ai.js?v=3"></script>
+  <script src="js/sound.js?v=3"></script>
+  <script src="js/board.js?v=3"></script>
+  <script src="js/tutorial.js?v=3"></script>
+  <script src="js/game.js?v=3"></script>
+  <script src="js/main.js?v=3"></script>
+</body>
+</html>
