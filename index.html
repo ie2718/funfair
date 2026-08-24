@@ -341,7 +341,7 @@
 
     <footer class="foot">
       <p>以码会友 · 其乐无穷</p>
-      <p class="made-by">Made by GLM 5.3</p>
+      <p class="made-by">展位壹 Made by GLM 5.3 · 展位贰 Made by ox Alpha</p>
       <p><a href="https://github.com/ie2718/funfair">GitHub · funfair</a></p>
     </footer>
   </div>
@@ -358,6 +358,16 @@
         desc: '水墨风格围棋游戏：零基础七课入门，人机对弈（四级 AI）、双人手谈、让子棋与数子法终局。完整规则引擎：提子、打劫、禁着点。',
         tags: ['Canvas', 'WebAudio', '规则引擎', '教学'],
         href: './GoGame/',
+        made: 'GLM 5.3',
+      },
+      {
+        num: '贰',
+        title: '手谈',
+        latin: 'SHOUTAN · 单文件围棋学堂',
+        desc: '单文件、零依赖的开源围棋应用：人机对弈（三档棋力）、七节互动学堂、五道死活题。打劫采用局面重复精确判定，MIT 协议开源。',
+        tags: ['单文件', 'SVG 棋盘', '死活题', 'MIT'],
+        href: './Shoutan/',
+        made: 'ox Alpha',
       },
     ];
 
@@ -398,7 +408,7 @@
         '<div class="card-tags">' + p.tags.map(function (t) {
           return '<span>' + t + '</span>';
         }).join('') + '</div>' +
-        '<div class="card-go">进入体验<span class="made">GLM 5.3</span></div>';
+        '<div class="card-go">进入体验<span class="made">Made by ' + p.made + '</span></div>';
 
       a.appendChild(view);
       a.appendChild(body);

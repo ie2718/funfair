@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>手谈 · 围棋学堂</title>
+<meta name="description" content="手谈:一个单文件开源围棋应用。人机对弈、零基础互动学堂、死活题练习,支持 9/13/19 路棋盘与中国规则。">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23c04a2e'/%3E%3Ctext x='32' y='46' font-size='40' text-anchor='middle' fill='%23f6ead6' font-family='serif'%3E弈%3C/text%3E%3C/svg%3E">
+<!--
+  手谈 Shoutan · 单文件围棋应用(对弈 + 互动学堂 + 死活题)
+  结构:样式 → 页面骨架 → 脚本
+    §引擎   纯函数,无 DOM 依赖,可在 Node 中直接测试(node test.mjs)
+    §渲染   BoardView:SVG 棋盘绘制与交互
+    §数据   LESSONS 课堂 / PUZZLES 死活题(坐标均为 9 路盘 r*9+c)
+    §控制器 Play / Learn / Puzzle 与 boot()
+  开源协议见 LICENSE(MIT)。
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;900&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#151210;
+  --card:rgba(255,246,228,.035);
+  --hairline:rgba(214,178,110,.22);
+  --gold:#d3aa62;
+  --gold-dim:#9a7c46;
+  --paper:#efe6d3;
+  --text:#e9dfca;
+  --text-dim:#a99c82;
+  --red:#c04a2e;
+  --red-bright:#d8593a;
+  --serif:"Noto Serif SC",serif;
+  --brush:"Ma Shan Zheng",cursive;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  background:
+    radial-gradient(1200px 700px at 75% -10%,rgba(211,170,98,.07),transparent 60%),
+    radial-gradient(900px 600px at 10% 110%,rgba(192,74,46,.06),transparent 60%),
+    var(--ink);
+  color:var(--text);
+  font-family:var(--serif);
+  overflow-x:hidden;
+}
+.grain{
+  position:fixed;inset:0;pointer-events:none;z-index:999;opacity:.05;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.watermark{
+  position:fixed;right:-4vmin;bottom:-10vmin;font-family:var(--brush);
+  font-size:52vmin;line-height:1;color:rgba(233,223,202,.03);pointer-events:none;z-index:0;user-select:none;
+}
+header{
+  position:relative;z-index:5;display:flex;align-items:center;gap:26px;flex-wrap:wrap;
+  padding:16px clamp(16px,4vw,48px);border-bottom:1px solid var(--hairline);
+  background:linear-gradient(180deg,rgba(30,25,19,.9),rgba(21,18,16,.7));
+  backdrop-filter:blur(8px);
+}
+.brand{display:flex;align-items:center;gap:14px}
+.seal-brand{
+  width:46px;height:46px;background:var(--red);color:#f6ead6;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-family:var(--brush);
+  font-size:28px;box-shadow:0 4px 18px rgba(192,74,46,.4),inset 0 0 0 2px rgba(246,234,214,.25);
+  transform:rotate(-3deg);
+}
+.brand h1{font-size:22px;font-weight:900;letter-spacing:.35em;color:var(--paper)}
+.brand small{display:block;font-size:10px;letter-spacing:.4em;color:var(--text-dim);font-weight:400;margin-top:2px}
+nav{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+nav button,#sndBtn{
+  font-family:var(--serif);font-size:14px;letter-spacing:.25em;padding:9px 18px 9px 22px;
+  background:transparent;border:1px solid transparent;color:var(--text-dim);
+  border-radius:6px;cursor:pointer;transition:.25s;
+}
+nav button:hover{color:var(--gold)}
+nav button.active{color:var(--paper);border-color:var(--hairline);background:var(--card)}
+#sndBtn{border-color:var(--hairline);color:var(--gold)}
+.made-by{
+  font-size:11px;letter-spacing:.18em;color:var(--text-dim);
+  font-style:italic;white-space:nowrap;align-self:center;
+}
+.made-by b{color:var(--gold);font-weight:600}
+main{position:relative;z-index:2;max-width:1440px;margin:0 auto;padding:clamp(14px,2.5vw,34px)}
+.view{display:none}
+.view.active{display:flex;gap:clamp(14px,2vw,28px);align-items:flex-start;justify-content:center;animation:fadein .5s ease}
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.stage{flex:0 1 auto;display:flex;justify-content:center;width:min(100%,720px)}
+.board-wrap{width:100%;max-width:680px;filter:drop-shadow(0 30px 60px rgba(0,0,0,.55))}
+.board-wrap svg{width:100%;height:auto;display:block;border-radius:12px;cursor:pointer}
+.panel{flex:0 0 320px;display:flex;flex-direction:column;gap:14px;min-width:280px;max-width:360px}
+.card{
+  background:var(--card);border:1px solid var(--hairline);border-radius:12px;
+  padding:18px 20px;backdrop-filter:blur(4px);
+}
+.card h3{
+  font-size:12px;font-weight:600;letter-spacing:.45em;color:var(--gold);
+  padding-bottom:10px;margin-bottom:14px;border-bottom:1px dashed rgba(211,170,98,.18);
+}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{
+  flex:1;font-family:var(--serif);padding:8px 4px;font-size:13px;letter-spacing:.1em;
+  background:transparent;border:1px solid var(--hairline);border-radius:7px;color:var(--text-dim);
+  cursor:pointer;transition:.2s;min-width:52px;
+}
+.seg button:hover{color:var(--gold)}
+.seg button.on{background:rgba(211,170,98,.14);border-color:var(--gold);color:var(--paper)}
+.btn{
+  font-family:var(--serif);font-size:14px;letter-spacing:.2em;padding:11px 12px;
+  border-radius:8px;cursor:pointer;transition:.2s;border:1px solid var(--hairline);
+  background:transparent;color:var(--text);width:100%;
+}
+.btn:hover:not(:disabled){border-color:var(--gold);background:rgba(211,170,98,.08)}
+.btn.primary{background:var(--red);border-color:transparent;color:#f6ead6;font-weight:600}
+.btn.primary:hover:not(:disabled){background:var(--red-bright)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btnrow{display:flex;gap:8px}
+.vs-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;gap:10px}
+.vs-row .lbl{font-size:13px;color:var(--text-dim);letter-spacing:.15em;white-space:nowrap}
+.caps{display:flex;gap:18px;justify-content:center;padding:6px 0 2px;font-size:15px}
+.capchip{display:flex;align-items:center;gap:9px}
+.stone-ico{width:20px;height:20px;border-radius:50%;display:inline-block;box-shadow:0 2px 5px rgba(0,0,0,.5)}
+.stone-ico.b{background:radial-gradient(circle at 34% 30%,#777,#0d0d0d 70%)}
+.stone-ico.w{background:radial-gradient(circle at 34% 30%,#fff,#cfc8ba 75%)}
+.turn-banner{display:flex;align-items:center;gap:12px;justify-content:center;font-size:16px;letter-spacing:.3em;padding:12px 0 4px;color:var(--paper)}
+.pulse{width:11px;height:11px;border-radius:50%;background:var(--red-bright);animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{transform:scale(.7);opacity:.5}50%{transform:scale(1.15);opacity:1}}
+.status-line{font-size:13px;color:var(--text-dim);text-align:center;letter-spacing:.1em;min-height:20px;line-height:1.7}
+.rail{flex:0 0 232px;display:flex;flex-direction:column;gap:9px;max-height:78vh;overflow-y:auto;padding-right:4px}
+.rail::-webkit-scrollbar{width:4px}
+.rail::-webkit-scrollbar-thumb{background:rgba(211,170,98,.3);border-radius:2px}
+.rail-item{
+  text-align:left;font-family:var(--serif);cursor:pointer;transition:.2s;width:100%;
+  background:var(--card);border:1px solid var(--hairline);border-radius:10px;
+  padding:12px 14px;color:var(--text-dim);font-size:14px;letter-spacing:.05em;
+}
+.rail-item:hover{color:var(--text);border-color:rgba(211,170,98,.45)}
+.rail-item.on{border-color:var(--gold);background:rgba(211,170,98,.1);color:var(--paper)}
+.rail-item .num{font-family:var(--brush);font-size:19px;color:var(--red-bright);margin-right:9px}
+.rail-item.done::after{content:"✓";float:right;color:var(--gold);font-size:13px}
+.rail-item small{display:block;font-size:11px;margin-top:3px;letter-spacing:.08em;opacity:.75}
+.lesson-prose{font-size:14.5px;line-height:2;color:var(--text);letter-spacing:.03em;text-align:justify}
+.lesson-prose em{color:var(--red-bright);font-style:normal;font-weight:600}
+.lesson-prose strong{color:var(--gold);font-weight:600}
+.hint-box{font-size:13.5px;line-height:1.95;color:var(--gold);letter-spacing:.05em}
+.diff-stars{color:var(--red-bright);letter-spacing:.2em;font-size:12px;margin-top:10px}
+.seal-pass{
+  width:88px;height:88px;margin:6px auto 14px;border:3px solid var(--red);border-radius:12px;
+  display:flex;align-items:center;justify-content:center;font-family:var(--brush);font-size:42px;
+  color:var(--red-bright);transform:rotate(-6deg);
+  box-shadow:inset 0 0 0 1.5px rgba(192,74,46,.4);background:rgba(192,74,46,.06);
+  animation:stamp .5s cubic-bezier(.2,1.4,.4,1);text-indent:.05em;
+}
+@keyframes stamp{from{opacity:0;transform:rotate(-6deg) scale(2.2)}to{opacity:1;transform:rotate(-6deg) scale(1)}}
+.pop{transform-box:fill-box;transform-origin:center;animation:pop .25s cubic-bezier(.2,1.5,.4,1)}
+@keyframes pop{0%{opacity:0;transform:scale(.35)}100%{opacity:1;transform:scale(1)}}
+.fadeout{transform-box:fill-box;transform-origin:center;animation:fadeo .55s forwards;pointer-events:none}
+@keyframes fadeo{to{opacity:0;transform:scale(1.4)}}
+#toast{
+  position:fixed;left:50%;bottom:44px;transform:translateX(-50%) translateY(30px);
+  background:rgba(24,20,15,.94);border:1px solid var(--gold-dim);color:var(--paper);
+  padding:12px 26px;border-radius:10px;font-size:14px;letter-spacing:.12em;z-index:1000;
+  opacity:0;pointer-events:none;transition:.35s cubic-bezier(.2,.9,.3,1.2);max-width:88vw;text-align:center;line-height:1.8;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#modal{position:fixed;inset:0;background:rgba(10,8,6,.72);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:900;padding:20px}
+#modal.show{display:flex}
+.modal-card{
+  background:linear-gradient(165deg,#241e16,#181410);border:1px solid var(--gold-dim);
+  border-radius:16px;padding:38px 44px;max-width:440px;width:100%;text-align:center;
+  animation:rise .45s cubic-bezier(.2,.9,.3,1.15);box-shadow:0 40px 90px rgba(0,0,0,.7);
+}
+@keyframes rise{from{opacity:0;transform:translateY(30px) scale(.94)}to{opacity:1;transform:none}}
+.modal-card h2{font-size:24px;letter-spacing:.3em;color:var(--paper);margin-bottom:8px;font-weight:900}
+.modal-card .sub{font-size:13px;color:var(--text-dim);letter-spacing:.2em;margin-bottom:20px}
+.modal-body{font-size:14.5px;line-height:2.1;color:var(--text);margin-bottom:24px;text-align:left}
+.score-table{width:100%;border-collapse:collapse;margin-bottom:22px}
+.score-table td{padding:8px 4px;border-bottom:1px dashed rgba(211,170,98,.18);font-size:14px}
+.score-table td:last-child{text-align:right;color:var(--gold)}
+.result-big{font-family:var(--brush);font-size:44px;color:var(--red-bright);margin:6px 0 2px}
+@media(max-width:1060px){
+  .view.active{flex-direction:column;align-items:center}
+  .panel,.rail{max-width:680px;width:100%;flex:auto}
+  .rail{flex-direction:row;overflow-x:auto;max-height:none}
+  .rail-item{min-width:150px}
+}
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div class="watermark">弈</div>
+<header>
+  <div class="brand">
+    <div class="seal-brand">弈</div>
+    <div><h1>手谈</h1><small>围棋启蒙学堂</small></div>
+  </div>
+  <nav>
+    <button data-view="play" class="active">对 弈</button>
+    <button data-view="learn">学 堂</button>
+    <button data-view="tsumego">死活题</button>
+  </nav>
+  <button id="sndBtn" title="音效开关">♪ 音效开</button>
+  <span class="made-by">Made by <b>ox Alpha</b></span>
+</header>
+<main>
+  <section id="view-play" class="view active">
+    <div class="stage"><div class="board-wrap" id="playBoard"></div></div>
+    <aside class="panel">
+      <div class="card">
+        <h3>对 局</h3>
+        <div class="turn-banner"><span class="pulse"></span><span id="turnText">黑方落子</span></div>
+        <div class="caps">
+          <span class="capchip"><span class="stone-ico b"></span>黑 提 <b id="capB">0</b></span>
+          <span class="capchip"><span class="stone-ico w"></span>白 提 <b id="capW">0</b></span>
+        </div>
+        <div class="status-line" id="playStatus"></div>
+      </div>
+      <div class="card btnrow">
+        <button class="btn" id="btnUndo">悔 棋</button>
+        <button class="btn" id="btnPass">停一手</button>
+      </div>
+      <div class="card">
+        <h3>新 对 局</h3>
+        <div class="vs-row"><span class="lbl">棋盘</span>
+          <div class="seg" id="segSize">
+            <button data-v="9" class="on">九路</button><button data-v="13">十三路</button><button data-v="19">十九路</button>
+          </div>
+        </div>
+        <div class="vs-row"><span class="lbl">对手</span>
+          <div class="seg" id="segOpp">
+            <button data-v="ai" class="on">电脑执白</button><button data-v="pvp">双人对弈</button>
+          </div>
+        </div>
+        <div class="vs-row" id="lvlRow"><span class="lbl">棋力</span>
+          <div class="seg" id="segLvl">
+            <button data-v="easy">入门</button><button data-v="mid" class="on">业余</button><button data-v="hard">有段</button>
+          </div>
+        </div>
+        <div style="height:12px"></div>
+        <button class="btn primary" id="btnNew">开 局</button>
+        <div class="status-line" style="margin-top:10px">中国规则 · 贴 6½ 目 · 双停终局</div>
+      </div>
+    </aside>
+  </section>
+
+  <section id="view-learn" class="view">
+    <aside class="rail" id="lessonList"></aside>
+    <div class="stage"><div class="board-wrap" id="learnBoard"></div></div>
+    <aside class="panel">
+      <div class="card">
+        <h3 id="lessonTitle">课 程</h3>
+        <div class="lesson-prose" id="lessonProse"></div>
+      </div>
+      <div class="card">
+        <h3>课 堂 状 态</h3>
+        <div class="hint-box" id="lessonLive"></div>
+        <div style="height:12px"></div>
+        <div class="btnrow">
+          <button class="btn" id="btnLessonRetry">重 来</button>
+          <button class="btn primary" id="btnLessonNext" disabled>下一课 →</button>
+        </div>
+      </div>
+    </aside>
+  </section>
+
+  <section id="view-tsumego" class="view">
+    <aside class="rail" id="puzzleList"></aside>
+    <div class="stage"><div class="board-wrap" id="puzBoard"></div></div>
+    <aside class="panel">
+      <div class="card">
+        <h3 id="puzTitle">死 活 题</h3>
+        <div class="lesson-prose" id="puzProse"></div>
+        <div class="diff-stars" id="puzStars"></div>
+      </div>
+      <div class="card">
+        <h3>题 面</h3>
+        <div class="hint-box" id="puzLive"></div>
+        <div style="height:12px"></div>
+        <div class="btnrow">
+          <button class="btn" id="btnPuzReset">重 做</button>
+          <button class="btn" id="btnPuzHint">提 示</button>
+          <button class="btn primary" id="btnPuzNext" disabled>下一题 →</button>
+        </div>
+      </div>
+    </aside>
+  </section>
+</main>
+<div id="toast"></div>
+<div id="modal"><div class="modal-card" id="modalCard"></div></div>
+
+<script>
+/*==== §引擎:棋盘状态与规则(纯函数,无 DOM)====*/
+const EMPTY=0,BLACK=1,WHITE=2;
+const COLS="ABCDEFGHJKLMNOPQRST";
+const opp=c=>c===BLACK?WHITE:BLACK;
+const idx=(r,c,n)=>r*n+c;
+const rc=(i,n)=>[Math.floor(i/n),i%n];
+const el=id=>document.getElementById(id);
+function neighborsOf(i,n){
+  const r=Math.floor(i/n),c=i%n,out=[];
+  if(r>0)out.push(i-n);
+  if(r<n-1)out.push(i+n);
+  if(c>0)out.push(i-1);
+  if(c<n-1)out.push(i+1);
+  return out;
+}
+function getGroup(board,i,n){
+  const color=board[i],stones=[],libs=new Set(),seen=new Set([i]),stack=[i];
+  while(stack.length){
+    const p=stack.pop();
+    stones.push(p);
+    for(const q of neighborsOf(p,n)){
+      if(board[q]===EMPTY){if(q!==i)libs.add(q);}
+      else if(board[q]===color&&!seen.has(q)){seen.add(q);stack.push(q);}
+    }
+  }
+  return{stones,libs};
+}
+function newState(n){
+  return{n,board:new Array(n*n).fill(EMPTY),turn:BLACK,caps:{[BLACK]:0,[WHITE]:0},
+    ko:null,lastMove:null,passes:0,history:[],moveNum:0};
+}
+function snapshot(st){
+  return{board:st.board.slice(),turn:st.turn,caps:{[BLACK]:st.caps[BLACK],[WHITE]:st.caps[WHITE]},
+    ko:st.ko,lastMove:st.lastMove,passes:st.passes,moveNum:st.moveNum};
+}
+function restore(st,s){
+  st.board=s.board.slice();st.turn=s.turn;st.caps={[BLACK]:s.caps[BLACK],[WHITE]:s.caps[WHITE]};
+  st.ko=s.ko;st.lastMove=s.lastMove;st.passes=s.passes;st.moveNum=s.moveNum;
+}
+function tryMove(st,i,color){
+  const n=st.n,b=st.board;
+  if(b[i]!==EMPTY)return{ok:false,reason:"occupied"};
+  const nb=b.slice();
+  nb[i]=color;
+  const captured=[];
+  for(const q of neighborsOf(i,n)){
+    if(nb[q]===opp(color)){
+      const g=getGroup(nb,q,n);
+      if(g.libs.size===0){for(const s of g.stones){nb[s]=EMPTY;captured.push(s);}}
+    }
+  }
+  const g=getGroup(nb,i,n);
+  if(g.libs.size===0)return{ok:false,reason:"suicide"};
+  const prev=st.history[st.history.length-1];
+  if(prev&&prev.board.length===nb.length){
+    let same=true;
+    for(let k=0;k<nb.length;k++){if(prev.board[k]!==nb[k]){same=false;break;}}
+    if(same)return{ok:false,reason:"ko"};
+  }
+  return{ok:true,board:nb,captured};
+}
+function commit(st,i,res){
+  st.history.push(snapshot(st));
+  st.board=res.board;
+  st.caps[opp(st.turn)]+=res.captured.length;
+  st.ko=null;
+  if(res.captured.length===1){
+    const g=getGroup(st.board,i,st.n);
+    if(g.libs.size===1)st.ko=res.captured[0];
+  }
+  st.lastMove=i;st.passes=0;st.moveNum++;
+  st.turn=opp(st.turn);
+  return res;
+}
+function doPass(st){
+  st.history.push(snapshot(st));
+  st.passes++;st.lastMove=null;st.ko=null;st.moveNum++;st.turn=opp(st.turn);
+}
+function undo(st,times){
+  for(let k=0;k<times;k++){if(st.history.length)restore(st,st.history.pop());else break;}
+}
+function countTrueEyes(board,color,n){
+  let eyes=0;
+  for(let i=0;i<n*n;i++){
+    if(board[i]!==EMPTY)continue;
+    const nbs=neighborsOf(i,n);
+    if(nbs.length&&nbs.every(q=>board[q]===color))eyes++;
+  }
+  return eyes;
+}
+function isTrueEye(board,i,color,n){
+  for(const q of neighborsOf(i,n))if(board[q]!==color)return false;
+  const r=Math.floor(i/n),c=i%n;
+  const dias=[];
+  if(r>0&&c>0)dias.push(i-n-1);
+  if(r>0&&c<n-1)dias.push(i-n+1);
+  if(r<n-1&&c>0)dias.push(i+n-1);
+  if(r<n-1&&c<n-1)dias.push(i+n+1);
+  let own=0,en=0;
+  for(const d of dias){if(board[d]===color)own++;else if(board[d]!==EMPTY)en++;}
+  const edge=dias.length<4;
+  return en===0&&(edge?own===dias.length:own>=3);
+}
+/*==== §引擎:电脑棋手(启发式估值)====*/
+function aiChoose(st,color,level){
+  const n=st.n,b=st.board,total=b.filter(v=>v).length;
+  const scored=[];
+  for(let i=0;i<n*n;i++){
+    if(b[i]!==EMPTY)continue;
+    if(isTrueEye(b,i,color,n))continue;
+    const res=tryMove(st,i,color);
+    if(!res.ok)continue;
+    let s=0;
+    s+=res.captured.length*38;
+    const g=getGroup(res.board,i,n);
+    const libs=g.libs.size;
+    if(libs===1)s-=34;
+    else if(libs===2)s-=4;
+    s+=Math.min(libs,4)*2.5;
+    for(const q of neighborsOf(i,n)){
+      if(b[q]===color){
+        const og=getGroup(b,q,n);
+        if(og.libs.size===1){
+          const ng=getGroup(res.board,q,n);
+          if(ng.libs.size>1)s+=16+og.stones.length*9;
+        }
+      }else if(b[q]===opp(color)){
+        const eg=getGroup(b,q,n);
+        const ng=getGroup(res.board,q,n);
+        if(ng.libs.size===1)s+=7+ng.stones.length*4;
+        else if(eg.libs.size===2)s+=4;
+      }
+    }
+    const[r,c]=rc(i,n);
+    const dc=Math.min(r,n-1-r,c,n-1-c);
+    if(total<n*n*0.22){
+      if(dc===0)s-=11;else if(dc===1)s-=3;else if(dc<=3)s+=5;
+      s-=(Math.abs(r-(n-1)/2)+Math.abs(c-(n-1)/2))*1.2;
+    }
+    if(st.lastMove!=null){
+      const[lr,lc]=rc(st.lastMove,n);
+      s+=Math.max(0,4-Math.max(Math.abs(lr-r),Math.abs(lc-c)))*1.5;
+    }
+    s+=Math.random()*1.5;
+    scored.push({i,s});
+  }
+  if(!scored.length)return null;
+  scored.sort((a,b2)=>b2.s-a.s);
+  const best=scored[0];
+  if(best.s<-18&&total>n*n*0.55)return{pass:true};
+  let pool;
+  if(level==="easy")pool=scored.filter(m=>m.s>=best.s-26).slice(0,9);
+  else if(level==="mid")pool=scored.filter(m=>m.s>=best.s-9).slice(0,4);
+  else pool=[best];
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+function fmtCoord(i,n){
+  const[r,c]=rc(i,n);
+  return COLS[c]+(n-r);
+}
+/*==== §引擎:中国规则数子 ====*/
+function scoreGame(st){
+  const n=st.n,b=st.board,seen=new Array(n*n).fill(false);
+  let tb=0,tw=0,terrB=0,terrW=0;
+  for(let i=0;i<n*n;i++){if(b[i]===BLACK)tb++;else if(b[i]===WHITE)tw++;}
+  for(let i=0;i<n*n;i++){
+    if(b[i]!==EMPTY||seen[i])continue;
+    const region=[],stack=[i],borders=new Set();
+    seen[i]=true;
+    while(stack.length){
+      const x=stack.pop();
+      region.push(x);
+      for(const y of neighborsOf(x,n)){
+        if(b[y]===EMPTY){if(!seen[y]){seen[y]=true;stack.push(y);}}
+        else borders.add(b[y]);
+      }
+    }
+    if(borders.size===1){if(borders.has(BLACK))terrB+=region.length;else terrW+=region.length;}
+  }
+  const komi=6.5,sb=tb+terrB,sw=tw+terrW+komi;
+  return{tb,tw,terrB,terrW,sb,sw,komi};
+}
+function resolveCaptures(board,n,color){
+  for(let i=0;i<n*n;i++){
+    if(board[i]===opp(color)){
+      const g=getGroup(board,i,n);
+      if(g.libs.size===0)for(const s of g.stones)board[s]=EMPTY;
+    }
+  }
+}
+/*==== §音效:Web Audio 合成 ====*/
+const Sound={
+  on:true,ctx:null,
+  ac(){if(!this.ctx)this.ctx=new(window.AudioContext||window.webkitAudioContext)();return this.ctx;},
+  click(freq,gain,dur,type){
+    if(!this.on)return;
+    try{
+      const ctx=this.ac(),t=ctx.currentTime;
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type=type;o.frequency.setValueAtTime(freq,t);
+      o.frequency.exponentialRampToValueAtTime(freq*0.6,t+dur);
+      g.gain.setValueAtTime(gain,t);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+      o.connect(g).connect(ctx.destination);o.start(t);o.stop(t+dur);
+      const buf=ctx.createBuffer(1,Math.floor(ctx.sampleRate*0.05),ctx.sampleRate);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);
+      const src=ctx.createBufferSource(),ng=ctx.createGain(),bp=ctx.createBiquadFilter();
+      bp.type="bandpass";bp.frequency.value=freq*2.4;bp.Q.value=1.2;
+      ng.gain.value=gain*0.8;
+      src.buffer=buf;src.connect(bp).connect(ng).connect(ctx.destination);src.start(t);
+    }catch(e){}
+  },
+  stone(){this.click(1900,0.16,0.09,"sine");},
+  capture(){this.click(760,0.2,0.16,"triangle");},
+  good(){this.click(1180,0.14,0.3,"triangle");setTimeout(()=>this.click(1560,0.13,0.35,"triangle"),130);}
+};
+/*==== §渲染:SVG 棋盘 ====*/
+class BoardView{
+  constructor(elBox,size,onPoint){
+    this.el=elBox;this.onPoint=onPoint;
+    this.cell=64;this.pad=46;
+    this.state=null;this.extra={};
+    this.setSize(size);
+    elBox.addEventListener("pointermove",e=>this.hover(e));
+    elBox.addEventListener("pointerleave",()=>{if(this.ghost!=null){this.ghost=null;this.draw();}});
+    elBox.addEventListener("click",e=>{
+      const p=this.posFromEvent(e);
+      if(p!=null&&this.onPoint&&!this.extra.locked)this.onPoint(p);
+    });
+  }
+  setSize(n){
+    this.size=n;
+    this.W=this.pad*2+this.cell*(n-1);
+    this.ghost=null;
+    this.build();
+    this.draw();
+  }
+  build(){
+    const n=this.size,W=this.W,pad=this.pad,cell=this.cell;
+    let grain="";
+    for(let k=0;k<6;k++){
+      const y=pad*0.3+((k*97)%(W-pad));
+      grain+=`<path d="M ${pad*0.2} ${y} C ${W*0.3} ${y+14-k*4},${W*0.6} ${y-16+k*5},${W-pad*0.2} ${y+6}" stroke="#7a5424" stroke-width="1.1" fill="none" opacity=".07"/>`;
+    }
+    let grid="";
+    for(let k=0;k<n;k++){
+      const v=pad+k*cell;
+      grid+=`<line x1="${pad}" y1="${v}" x2="${W-pad}" y2="${v}"/>`;
+      grid+=`<line x1="${v}" y1="${pad}" x2="${v}" y2="${W-pad}"/>`;
+    }
+    let stars="";
+    const starList=n===9?[[2,2],[2,6],[6,2],[6,6],[4,4]]:n===13?[[3,3],[3,9],[9,3],[9,9],[6,6]]:[[3,3],[3,9],[3,15],[9,3],[9,9],[9,15],[15,3],[15,9],[15,15]];
+    for(const[r,c]of starList){
+      stars+=`<circle cx="${pad+c*cell}" cy="${pad+r*cell}" r="4.2"/>`;
+    }
+    let coords="";
+    for(let c=0;c<n;c++){
+      coords+=`<text x="${pad+c*cell}" y="${pad-24}" text-anchor="middle">${COLS[c]}</text>`;
+      coords+=`<text x="${pad+c*cell}" y="${W-pad+30}" text-anchor="middle">${COLS[c]}</text>`;
+    }
+    for(let r=0;r<n;r++){
+      coords+=`<text x="${pad-27}" y="${pad+r*cell+4}" text-anchor="middle">${n-r}</text>`;
+      coords+=`<text x="${W-pad+27}" y="${pad+r*cell+4}" text-anchor="middle">${n-r}</text>`;
+    }
+    const inset=pad-cell*0.72;
+    this.el.innerHTML=`<svg viewBox="0 0 ${W} ${W}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="wood${this.el.id}" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#e3b26c"/><stop offset=".5" stop-color="#d3a058"/><stop offset="1" stop-color="#bd8943"/>
+        </linearGradient>
+        <radialGradient id="gradB${this.el.id}" cx=".36" cy=".3" r=".9">
+          <stop offset="0" stop-color="#6f6f6f"/><stop offset=".55" stop-color="#222"/><stop offset="1" stop-color="#000"/>
+        </radialGradient>
+        <radialGradient id="gradW${this.el.id}" cx=".36" cy=".3" r=".95">
+          <stop offset="0" stop-color="#ffffff"/><stop offset=".7" stop-color="#e9e2d2"/><stop offset="1" stop-color="#c9c0ac"/>
+        </radialGradient>
+        <filter id="sh${this.el.id}" x="-40%" y="-40%" width="180%" height="180%">
+          <feDropShadow dx="2.5" dy="4" stdDeviation="3.2" flood-color="#000" flood-opacity=".38"/>
+        </filter>
+      </defs>
+      <rect width="${W}" height="${W}" rx="12" fill="url(#wood${this.el.id})"/>
+      ${grain}
+      <rect x="${inset}" y="${inset}" width="${W-2*inset}" height="${W-2*inset}" fill="none" stroke="#573d1c" stroke-width="1.6" opacity=".65" rx="4"/>
+      <g stroke="#573d1c" stroke-width="1.15">${grid}</g>
+      <g fill="#573d1c">${stars}</g>
+      <g font-family="Noto Serif SC,serif" font-size="13" fill="rgba(60,40,12,.55)">${coords}</g>
+      <g id="fx_${this.el.id}"></g>
+      <g id="st_${this.el.id}"></g>
+      <g id="top_${this.el.id}"></g>
+    </svg>`;
+    this.lFx=this.el.querySelector(`#fx_${this.el.id}`);
+    this.lStones=this.el.querySelector(`#st_${this.el.id}`);
+    this.lTop=this.el.querySelector(`#top_${this.el.id}`);
+    this.svg=this.el.querySelector("svg");
+  }
+  posFromEvent(e){
+    const rect=this.svg.getBoundingClientRect();
+    const x=(e.clientX-rect.left)*(this.W/rect.width);
+    const y=(e.clientY-rect.top)*(this.W/rect.height);
+    const c=Math.round((x-this.pad)/this.cell),r=Math.round((y-this.pad)/this.cell);
+    if(r<0||c<0||r>=this.size||c>=this.size)return null;
+    const gx=this.pad+c*this.cell,gy=this.pad+r*this.cell;
+    if(Math.hypot(x-gx,y-gy)>this.cell*0.48)return null;
+    return idx(r,c,this.size);
+  }
+  hover(e){
+    if(!this.state)return;
+    const p=this.posFromEvent(e);
+    const g=(p!=null&&this.state.board[p]===EMPTY&&!this.extra.locked)?p:null;
+    if(g!==this.ghost){this.ghost=g;this.draw();}
+  }
+  setState(st,extra){
+    this.state=st;
+    this.extra=extra||{};
+    this.ghost=null;
+    this.draw();
+  }
+  px(i){const[r,c]=rc(i,this.size);return[this.pad+c*this.cell,this.pad+r*this.cell];}
+  stoneCircle(i,color,fresh){
+    const[x,y]=this.px(i),r=this.cell*0.47;
+    const grad=color===BLACK?`gradB${this.el.id}`:`gradW${this.el.id}`;
+    const stroke=color===WHITE?' stroke="rgba(120,105,80,.45)" stroke-width="1"':"";
+    return`<g class="${fresh?"pop":""}"><circle cx="${x}" cy="${y}" r="${r}" fill="url(#${grad})" filter="url(#sh${this.el.id})"${stroke}/>${color===BLACK?`<ellipse cx="${x-r*0.32}" cy="${y-r*0.38}" rx="${r*0.3}" ry="${r*0.18}" fill="rgba(255,255,255,.22)"/>`:``}</g>`;
+  }
+  draw(){
+    if(!this.svg)return;
+    const st=this.state,n=this.size;
+    let sh="";
+    if(st){
+      for(let i=0;i<n*n;i++){
+        const v=st.board[i];
+        if(!v)continue;
+        sh+=this.stoneCircle(i,v,this.extra.lastPlaced===i);
+      }
+    }
+    this.lStones.innerHTML=sh;
+    let top="";
+    if(st&&st.lastMove!=null&&st.board[st.lastMove]){
+      const[x,y]=this.px(st.lastMove);
+      top+=`<circle cx="${x}" cy="${y}" r="7.5" fill="none" stroke="#d8593a" stroke-width="3"/>`;
+    }
+    if(st&&this.ghost!=null&&st.board[this.ghost]===EMPTY){
+      const[x,y]=this.px(this.ghost),r=this.cell*0.47;
+      top+=`<circle cx="${x}" cy="${y}" r="${r}" fill="${st.turn===BLACK?"#111":"#fff"}" opacity=".42"/>`;
+    }
+    for(const m of this.extra.marks||[]){
+      const[x,y]=this.px(m.i),u=this.cell*0.3;
+      if(m.t==="dot")top+=`<circle cx="${x}" cy="${y}" r="${u*0.55}" fill="#d8593a" opacity=".85"/>`;
+      else if(m.t==="hint")top+=`<circle cx="${x}" cy="${y}" r="${u}" fill="none" stroke="#d8593a" stroke-width="3.5" stroke-dasharray="7 5"/>`;
+      else if(m.t==="cross"){
+        top+=`<path d="M ${x-u} ${y-u} L ${x+u} ${y+u} M ${x-u} ${y+u} L ${x+u} ${y-u}" stroke="#a33d24" stroke-width="4.5" stroke-linecap="round" opacity=".9"/>`;
+      }else if(m.t==="sq"){
+        top+=`<rect x="${x-u*0.8}" y="${y-u*0.8}" width="${u*1.6}" height="${u*1.6}" fill="none" stroke="#d3aa62" stroke-width="2.5"/>`;
+      }
+    }
+    if(this.extra.hintMark!=null&&st&&st.board[this.extra.hintMark]===EMPTY){
+      const[x,y]=this.px(this.extra.hintMark),u=this.cell*0.34;
+      top+=`<rect x="${x-u}" y="${y-u}" width="${u*2}" height="${u*2}" fill="none" stroke="#d8593a" stroke-width="4"><animate attributeName="opacity" values="1;.25;1" dur="1.1s" repeatCount="indefinite"/></rect>`;
+    }
+    this.lTop.innerHTML=top;
+  }
+  fadeCaptures(list,color){
+    const r=this.cell*0.47;
+    const grad=color===BLACK?`gradB${this.el.id}`:`gradW${this.el.id}`;
+    for(const i of list){
+      const[x,y]=this.px(i);
+      const c=document.createElementNS("http://www.w3.org/2000/svg","circle");
+      c.setAttribute("cx",x);c.setAttribute("cy",y);c.setAttribute("r",r);
+      c.setAttribute("fill",`url(#${grad})`);
+      c.setAttribute("class","fadeout");
+      this.lFx.appendChild(c);
+      setTimeout(()=>c.remove(),600);
+    }
+  }
+}
+/*==== §数据:课程与死活题(9 路盘,坐标 r*9+c)====*/
+const P=(r,c)=>idx(r,c,9);
+const LESSONS=[
+{
+  id:"l1",num:"一",title:"初识棋盘",
+  prose:`围棋的棋盘由纵横线交叉而成，棋子要下在<strong>交叉点</strong>上，而不是格子里。九路小棋盘共有 <em>81</em> 个交叉点。标着圆点的位置叫<strong>星位</strong>，正中央那颗叫<em>天元</em>。<br><br>对局时黑先白后，轮流落子，落子后不能移动。<br><br>试试看：点击任意交叉点，落下你的第一颗棋子！`,
+  setup:[],marks:[{i:P(2,2),t:"dot"},{i:P(2,6),t:"dot"},{i:P(6,2),t:"dot"},{i:P(6,6),t:"dot"},{i:P(4,4),t:"sq"}],
+  live:ctx=>`已落下 <b>${ctx.st.moveNum}</b> 颗棋子`,
+  check:ctx=>ctx.color===BLACK
+},
+{
+  id:"l2",num:"二",title:"气 · 棋子的生命",
+  prose:`棋子在盘上生存靠的是「<strong>气</strong>」——与它直线紧邻的空交叉点。<br><br>中间一颗棋有 <em>4</em> 口气；贴边只剩 3 口；缩在角上就只有 2 口了。气被堵光，棋就会被提走。<br><br>盘上有一颗白子。请下一颗<strong>黑棋</strong>,堵住它的其中一口气（它的四口气质圈位置）。`,
+  setup:[{p:P(4,4),c:WHITE}],
+  marks:[],
+  live:ctx=>{
+    const g=getGroup(ctx.st.board,P(4,4),9);
+    return`白棋还有 <b>${g.libs.size}</b> 口气${g.libs.size===3?" <span class=\"ok\">· 干得好！</span>":""}`;
+  },
+  check:ctx=>{
+    if(ctx.color!==BLACK)return false;
+    return getGroup(ctx.st.board,P(4,4),9).libs.size<4;
+  }
+},
+{
+  id:"l3",num:"三",title:"提 子",
+  prose:`当一颗棋<strong>最后一口气</strong>被堵住,它就会立刻被从棋盘上拿走,这叫「<em>提子</em>」——这是围棋里最爽快的瞬间!<br><br>角上的这颗白棋已经奄奄一息,只剩下最后一口气(虚线圈的位置)。<br><br>黑棋出手,把它提掉!`,
+  setup:[{p:P(8,1),c:WHITE},{p:P(8,0),c:BLACK},{p:P(8,2),c:BLACK}],
+  marks:[{i:P(7,1),t:"hint"}],
+  live:ctx=>`白棋气数:<b>${getGroup(ctx.st.board,P(8,1),9).libs.size}</b>`,
+  check:ctx=>ctx.res&&ctx.res.captured.length>0,
+  doneMsg:"提子成功!被提走的棋会从盘上消失。"
+},
+{
+  id:"l4",num:"四",title:"一网打尽",
+  prose:`气是整块棋<strong>共用</strong>的。下面两颗连在一起的白子同气连枝,如今共享最后<em>一口</em>气。<br><br>在虚圈处落下一子,就能一口气提掉两颗白子——这就叫「双提」!`,
+  setup:[{p:P(8,3),c:WHITE},{p:P(8,4),c:WHITE},{p:P(8,2),c:BLACK},{p:P(8,5),c:BLACK},{p:P(7,4),c:BLACK}],
+  marks:[{i:P(7,3),t:"hint"}],
+  live:ctx=>`这块白棋的气:<b>${getGroup(ctx.st.board,P(8,3),9).libs.size}</b>`,
+  check:ctx=>ctx.res&&ctx.res.captured.length>0,
+  doneMsg:"一手两子!你已经掌握了提子的精髓。"
+},
+{
+  id:"l5",num:"五",title:"禁入点",
+  prose:`围棋禁止「自杀」:如果落子后自己的棋<em>没有气</em>,又吃不到对方的子,这个点就是<strong>禁入点</strong>。<br><br>左下角画 × 的空点正被白棋团团围住——先点点看它(会被拒绝!),再想想为什么。然后去把上方那颗只剩一口气的白棋提掉。`,
+  setup:[{p:P(8,1),c:WHITE},{p:P(7,0),c:WHITE},{p:P(5,0),c:WHITE},{p:P(5,1),c:BLACK},{p:P(6,0),c:BLACK}],
+  marks:[{i:P(8,0),t:"cross"},{i:P(4,0),t:"hint"}],
+  onIllegal:(ctx,reason)=>{
+    if(reason==="suicide"&&ctx.idx===P(8,0)){
+      ctx.flags.saw=true;
+      toast("看到了吗?在这里落子自己没有气、又提不掉对方——这就是禁入点!");
+    }
+  },
+  live:ctx=>{
+    let s=`白角上那颗棋的气:<b>${getGroup(ctx.st.board,P(5,0),9).libs.size}</b>`;
+    if(ctx.flags.saw)s+=`<br><span class="ok">✓ 已体验禁入点</span>`;
+    return s;
+  },
+  check:ctx=>ctx.res&&ctx.res.captured.length>0,
+  doneMsg:"提子成功!禁入点不能落子,但能提子的点永远欢迎你。"
+},
+{
+  id:"l6",num:"六",title:"打 劫",
+  prose:`「劫」是围棋最特别的规则。当双方可以<em>你来我往互相提一子</em>时,若允许立刻回提,对局将永远循环下去。<br><br>所以规则规定:<strong>被打劫的一方不能马上回提</strong>,必须先在别处落一手(找「劫材」),下一手才能提回来。<br><br>来体验一下:① 黑棋在虚圈处落子,提掉白子;② 轮到白棋时,试着直接回提——看看会发生什么!`,
+  setup:[{p:P(8,4),c:WHITE},{p:P(8,3),c:BLACK},{p:P(7,4),c:BLACK},{p:P(8,1),c:BLACK},{p:P(8,2),c:BLACK},{p:P(8,6),c:WHITE},{p:P(7,5),c:WHITE},{p:P(8,7),c:WHITE}],
+  marks:[{i:P(8,5),t:"hint"}],
+  onIllegal:(ctx,reason)=>{
+    if(reason==="ko"){
+      ctx.flags.koSeen=true;
+      toast("打劫!刚被提掉的子不能立刻回提,必须先在别处落一手寻劫材。");
+    }
+  },
+  live:(ctx,flags)=>flags.koSeen
+    ?`<span class="ok">✓ 你已亲身体验了劫的规则</span>`
+    :(ctx.st.ko!=null?"劫争进行中…白棋想立刻回提?试试点击刚才被提的位置!":"按提示完成黑棋的提子"),
+  check:(ctx,flags)=>!!flags.koSeen
+},
+{
+  id:"l7",num:"七",title:"做两只眼",
+  prose:`被包围的棋怎样才算安全?<strong>有两只真眼</strong>!两个独立完整的眼位,对方无法同时填掉(填一个眼自己也是自杀),这就是<em>活棋</em>。<br><br>眼下黑棋的眼位是底边三格直排的「<strong>直三</strong>」——抢占<em>正中一点</em>,一分为二,即成两眼!<br><br>黑先,救活这条被围住的小龙吧。`,
+  setup:[{p:P(7,4),c:BLACK},{p:P(7,5),c:BLACK},{p:P(7,6),c:BLACK},{p:P(7,7),c:BLACK},{p:P(7,8),c:BLACK},{p:P(8,4),c:BLACK},{p:P(8,8),c:BLACK},{p:P(6,4),c:WHITE},{p:P(6,5),c:WHITE},{p:P(6,6),c:WHITE},{p:P(6,7),c:WHITE},{p:P(6,8),c:WHITE}],
+  marks:[{i:P(8,6),t:"hint"}],
+  live:ctx=>{
+    const e=countTrueEyes(ctx.st.board,BLACK,9);
+    return`黑龙真眼:<b>${e}</b> 只${e>=2?' <span class="ok">· 活了!</span>':"(需两只)"}`;
+  },
+  check:ctx=>ctx.color===BLACK&&countTrueEyes(ctx.st.board,BLACK,9)>=2,
+  doneMsg:"两眼活棋!从此你的棋有了安身立命之本。"
+}
+];
+const PUZZLES=[
+{
+  id:"p1",stars:"★",title:"边路双提",
+  prose:`边路上两颗白子连成一体,共享着最后<em>一口气</em>。<br><br>黑先:找到那口气,一手提两子!`,
+  setup:[{p:P(0,6),c:WHITE},{p:P(0,7),c:WHITE},{p:P(0,5),c:BLACK},{p:P(0,8),c:BLACK},{p:P(1,6),c:BLACK}],
+  success:"capture"
+},
+{
+  id:"p2",stars:"★★",title:"一石二鸟",
+  prose:`两块白棋都只剩摇摇欲坠的气。有一个绝妙的交叉点,<strong>一子落下同时打吃两块白棋</strong>——找到它!`,
+  setup:[{p:P(3,4),c:WHITE},{p:P(4,3),c:WHITE},{p:P(4,5),c:WHITE},{p:P(2,4),c:BLACK},{p:P(3,3),c:BLACK},{p:P(3,5),c:BLACK},{p:P(4,2),c:BLACK},{p:P(4,6),c:BLACK},{p:P(5,3),c:BLACK}],
+  success:"capture"
+},
+{
+  id:"p3",stars:"★★",title:"直三做眼",
+  prose:`黑棋被白棋封锁,眼位是一个「<strong>直三</strong>」——三格直排的空。<br><br>抢占正中一点,把一眼分成两眼,即成活棋!`,
+  setup:[{p:P(0,4),c:BLACK},{p:P(0,8),c:BLACK},{p:P(1,4),c:BLACK},{p:P(1,5),c:BLACK},{p:P(1,6),c:BLACK},{p:P(1,7),c:BLACK},{p:P(1,8),c:BLACK},{p:P(2,4),c:WHITE},{p:P(2,5),c:WHITE},{p:P(2,6),c:WHITE},{p:P(2,7),c:WHITE},{p:P(2,8),c:WHITE}],
+  anchor:P(1,5),
+  success:"eyes"
+},
+{
+  id:"p4",stars:"★★",title:"瓮中捉鳖",
+  prose:`黑棋已布下天罗地网,大块白棋被困在中央的狭小空间里,只剩<em>两口气</em>。<br><br>收紧口袋——注意别把自己的棋送进虎口!<br><br><b style="color:#d8593a">白棋由 AI 应对,会拼死突围。</b>`,
+  setup:[{p:P(4,4),c:WHITE},{p:P(5,4),c:WHITE},{p:P(3,4),c:BLACK},{p:P(4,3),c:BLACK},{p:P(4,5),c:BLACK},{p:P(5,5),c:BLACK},{p:P(6,3),c:BLACK},{p:P(6,5),c:BLACK},{p:P(7,3),c:BLACK},{p:P(7,5),c:BLACK},{p:P(8,4),c:BLACK}],
+  success:"capture"
+},
+{
+  id:"p5",stars:"★★★",title:"曲三点眼",
+  prose:`「曲三」是<em>拐弯</em>的三格眼位。与直三同理,抢下<strong>弯心一点</strong>,即得两眼。<br><br>黑先,做活这块棋!`,
+  setup:[{p:P(0,2),c:BLACK},{p:P(1,1),c:BLACK},{p:P(1,2),c:BLACK},{p:P(2,0),c:BLACK},{p:P(2,1),c:BLACK},{p:P(0,3),c:WHITE},{p:P(2,2),c:WHITE},{p:P(2,3),c:WHITE}],
+  anchor:P(1,1),
+  success:"eyes"
+}
+];
+/*==== §应用:通用 UI(弹窗/提示/进度)====*/
+let toastTimer=null;
+function toast(msg,dur){
+  const t=el("toast");
+  t.innerHTML=msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove("show"),dur||3000);
+}
+function showModal(title,sub,body,actions){
+  const m=el("modal"),c=el("modalCard");
+  let btns="";
+  for(let i=0;i<actions.length;i++){
+    const a=actions[i];
+    btns+=`<button class="btn ${a.primary?"primary":""}" data-mi="${i}" style="flex:1;${i>0?"margin-left:10px;":""}">${a.label}</button>`;
+  }
+  c.innerHTML=`<h2>${title}</h2><div class="sub">${sub||""}</div><div class="modal-body">${body}</div><div style="display:flex">${btns}</div>`;
+  c.querySelectorAll("button[data-mi]").forEach(b=>{
+    b.addEventListener("click",()=>{
+      m.classList.remove("show");
+      const a=actions[+b.dataset.mi];
+      if(a.cb)a.cb();
+    });
+  });
+  m.classList.add("show");
+}
+const REASONS={occupied:"此处已有棋子",ko:"打劫:不能立刻回提,须先在别处落子寻劫材。",suicide:"禁入点:落子后自己无气、又提不到对方,规则不允许。"};
+const Progress={
+  data:{lessons:[],puzzles:[]},
+  load(){
+    try{
+      const raw=localStorage.getItem("shoutan_v1");
+      if(raw)this.data=JSON.parse(raw);
+    }catch(e){}
+  },
+  save(k,id){
+    const arr=this.data[k];
+    if(!arr.includes(id)){arr.push(id);try{localStorage.setItem("shoutan_v1",JSON.stringify(this.data));}catch(e){}}
+  }
+};
+function applySetup(st,setup){
+  for(const s of setup)st.board[s.p]=s.c;
+}
+function segVal(id){
+  return el(id).querySelector("button.on").dataset.v;
+}
+function seg(id,cb){
+  el(id).addEventListener("click",e=>{
+    const b=e.target.closest("button");
+    if(!b)return;
+    el(id).querySelectorAll("button").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");
+    if(cb)cb(b.dataset.v);
+  });
+}
+function railRender(boxId,items,curKey,doneKey,onPick){
+  const box=el(boxId);
+  box.innerHTML="";
+  items.forEach((it,k)=>{
+    const b=document.createElement("button");
+    b.className="rail-item"+(k===curKey?" on":"")+(Progress.data[doneKey].includes(it.id)?" done":"");
+    b.innerHTML=`<span class="num">${it.num||k+1}</span>${it.title}<small>${it.sub||""}</small>`;
+    b.addEventListener("click",()=>onPick(k));
+    box.appendChild(b);
+  });
+}
+/*==== §控制器:学堂 ====*/
+const Learn={
+  cur:0,st:null,flags:{},done:false,busy:false,
+  init(){
+    this.board=new BoardView(el("learnBoard"),9,i=>this.tap(i));
+    this.load(0);
+  },
+  load(k){
+    this.cur=k;
+    const L=LESSONS[k];
+    this.st=newState(9);
+    applySetup(this.st,L.setup);
+    this.flags={};
+    this.done=false;
+    this.board.setSize(9);
+    el("lessonTitle").innerHTML=L.num+" · "+L.title;
+    el("lessonProse").innerHTML=L.prose;
+    el("btnLessonNext").disabled=true;
+    this.render();
+    railRender("lessonList",LESSONS,this.cur,"lessons",kk=>this.load(kk));
+  },
+  marks(){
+    const L=LESSONS[this.cur];
+    let m=L.marks?L.marks.slice():[];
+    if(L.id==="l6"&&this.st.ko!=null)m=[{i:this.st.ko,t:"hint"}];
+    else if(L.id==="l6"&&this.st.moveNum>0)m=[];
+    return m;
+  },
+  render(extra){
+    const L=LESSONS[this.cur];
+    this.board.setState(this.st,Object.assign({marks:this.marks()},extra));
+    el("lessonLive").innerHTML=this.done
+      ?`<div class="seal-pass">通</div><span class="ok">本课通过!</span>${L.doneMsg?"<br>"+L.doneMsg:""}`
+      :L.live?L.live({st:this.st,idx:-1,res:null,color:this.st.turn===BLACK?BLACK:WHITE,flags:this.flags},this.flags):"";
+  },
+  tap(i){
+    if(this.done)return;
+    const L=LESSONS[this.cur],st=this.st;
+    const color=st.turn;
+    const res=tryMove(st,i,color);
+    if(!res.ok){
+      if(L.onIllegal)L.onIllegal({st,flags:this.flags,idx:i},res.reason);
+      else toast(REASONS[res.reason]);
+      this.tryComplete({st,idx:i,res:null,color,flags:this.flags});
+      this.render();
+      return;
+    }
+    commit(st,i,res);
+    Sound.stone();
+    if(res.captured.length)Sound.capture();
+    this.board.fadeCaptures(res.captured,opp(color));
+    this.tryComplete({st,idx:i,res,color,flags:this.flags});
+    this.render({lastPlaced:i});
+  },
+  tryComplete(ctx){
+    const L=LESSONS[this.cur];
+    if(this.done||!L.check)return;
+    if(L.check(ctx,this.flags)){
+      this.done=true;
+      Progress.save("lessons",L.id);
+      Sound.good();
+      railRender("lessonList",LESSONS,this.cur,"lessons",kk=>this.load(kk));
+      el("btnLessonNext").disabled=false;
+    }
+  },
+  next(){if(this.cur<LESSONS.length-1)this.load(this.cur+1);else toast("七课全部完成!去「死活题」检验身手吧 ✦")}
+};
+/*==== §控制器:死活题 ====*/
+const Puzzle={
+  cur:0,st:null,flags:{},solved:false,failed:false,busy:false,
+  init(){
+    this.board=new BoardView(el("puzBoard"),9,i=>this.tap(i));
+    this.load(0);
+  },
+  load(k){
+    this.cur=k;
+    const pz=PUZZLES[k];
+    this.st=newState(9);
+    applySetup(this.st,pz.setup);
+    this.flags={};
+    this.solved=false;this.failed=false;this.busy=false;
+    this.board.setSize(9);
+    el("btnPuzNext").disabled=true;
+    el("btnPuzHint").disabled=false;
+    railRender("puzzleList",PUZZLES,this.cur,"puzzles",kk=>this.load(kk));
+    this.render();
+  },
+  render(extra){
+    const pz=PUZZLES[this.cur];
+    el("puzTitle").innerHTML="第 "+(this.cur+1)+" 题 · "+pz.title;
+    el("puzStars").textContent="难度 "+pz.stars+" · 黑先";
+    let s="黑先。"+(pz.success==="capture"?"目标:<b>提掉白棋</b>":"目标:<b>做出两只真眼</b>");
+    if(this.solved)s=`<div class="seal-pass">解</div><span class="ok">正解!</span><br>你已破解此题。`;
+    else if(this.failed)s=`<span style="color:#d8593a">✗ ${this.failMsg}</span><br>点击「重做」再试一次。`;
+    else if(pz.success==="eyes")s+=`<br>黑棋真眼:<b>${countTrueEyes(this.st.board,BLACK,9)}</b> 只(需两只)`;
+    el("puzLive").innerHTML=s;
+    const marks=[];
+    this.board.setState(this.st,Object.assign({marks},extra||{}));
+  },
+  tap(i){
+    if(this.solved||this.failed||this.busy)return;
+    const pz=PUZZLES[this.cur],st=this.st;
+    if(st.turn!==BLACK){toast("现在轮到白棋…");return;}
+    const res=tryMove(st,i,BLACK);
+    if(!res.ok){toast(REASONS[res.reason]);return;}
+    commit(st,i,res);
+    Sound.stone();
+    if(res.captured.length)Sound.capture();
+    this.board.fadeCaptures(res.captured,WHITE);
+    if(res.captured.length>0){this.win();return;}
+    if(pz.success==="eyes"&&countTrueEyes(st.board,BLACK,9)>=2){this.win();return;}
+    this.render({lastPlaced:i});
+    this.busy=true;
+    setTimeout(()=>{
+      const m=aiChoose(st,WHITE,"hard");
+      if(m&&!m.pass){
+        const wres=tryMove(st,m.i,WHITE);
+        if(wres.ok){
+          commit(st,m.i,wres);
+          Sound.click(1500,0.12,0.09,"sine");
+          if(wres.captured.length)Sound.capture();
+          this.board.fadeCaptures(wres.captured,BLACK);
+          if(wres.captured.length>0){
+            this.busy=false;
+            this.failMsg="白棋提掉了你的子!";
+            this.failed=true;
+            this.render();
+            return;
+          }
+        }
+      }else{
+        doPass(st);
+        toast("白方停一手");
+      }
+      this.busy=false;
+      if(st.moveNum>80&&!this.solved){
+        this.failMsg="手数过多,局面已偏离正解。";
+        this.failed=true;
+      }
+      this.render({lastPlaced:st.lastMove});
+    },420);
+  },
+  win(){
+    this.solved=true;
+    Progress.save("puzzles",PUZZLES[this.cur].id);
+    Sound.good();
+    el("btnPuzNext").disabled=false;
+    el("btnPuzHint").disabled=true;
+    railRender("puzzleList",PUZZLES,this.cur,"puzzles",kk=>this.load(kk));
+    this.render();
+  },
+  hint(){
+    if(this.solved||this.failed)return;
+    const pz=PUZZLES[this.cur];
+    if(pz.success==="capture"){
+      for(let i=0;i<81;i++){
+        if(this.st.board[i]!==EMPTY)continue;
+        const r=tryMove(this.st,i,BLACK);
+        if(r.ok&&r.captured.length>0){
+          toast("提示:有一手可以立刻提子——"+fmtCoord(i,9)+" 位");
+          this.render({hintMark:i});
+          return;
+        }
+      }
+    }
+    if(pz.success==="eyes"){
+      for(let i=0;i<81;i++){
+        if(this.st.board[i]!==EMPTY)continue;
+        const nb=this.st.board.slice();
+        nb[i]=BLACK;
+        resolveCaptures(nb,9,BLACK);
+        if(countTrueEyes(nb,BLACK,9)>=2){
+          toast("提示:做眼的好点在 "+fmtCoord(i,9)+" 附近");
+          this.render({hintMark:i});
+          return;
+        }
+      }
+    }
+    const m=aiChoose(this.st,BLACK,"hard");
+    if(m&&!m.pass){
+      toast("提示:考虑 "+fmtCoord(m.i,9)+" 位");
+      this.render({hintMark:m.i});
+    }else toast("提示:此刻没有好棋,考虑停一手或换个思路");
+  }
+};
+/*==== §控制器:对弈 ====*/
+const Play={
+  st:null,vsAI:true,level:"mid",size:9,busy:false,ended:false,
+  init(){
+    this.board=new BoardView(el("playBoard"),9,i=>this.tap(i));
+    this.newGame();
+  },
+  newGame(){
+    this.size=+segVal("segSize");
+    this.vsAI=segVal("segOpp")==="ai";
+    this.level=segVal("segLvl");
+    this.st=newState(this.size);
+    this.ended=false;this.busy=false;
+    this.board.setSize(this.size);
+    el("lvlRow").style.display=this.vsAI?"flex":"none";
+    this.updateUI();
+  },
+  updateUI(extra){
+    const st=this.st;
+    el("capB").textContent=st.caps[BLACK];
+    el("capW").textContent=st.caps[WHITE];
+    let turn;
+    if(this.ended)turn="对局结束";
+    else if(this.busy)turn="电脑思考中 …";
+    else turn=(st.turn===BLACK?"黑方落子":"白方落子")+(this.vsAI&&st.turn===WHITE?" (电脑)":"");
+    el("turnText").textContent=turn;
+    el("playStatus").textContent=st.lastMove!=null
+      ?"第 "+st.moveNum+" 手 · 最近落子 "+fmtCoord(st.lastMove,st.n)
+      :(st.moveNum?("第 "+st.moveNum+" 手"):"对局开始,黑先行");
+    this.board.setState(st,Object.assign({locked:this.busy||this.ended||(this.vsAI&&st.turn===WHITE)},extra||{}));
+  },
+  tap(i){
+    if(this.ended)return;
+    if(this.vsAI&&this.st.turn!==BLACK)return;
+    if(this.play(i)&&this.vsAI)this.aiTurn();
+  },
+  play(i){
+    const st=this.st,color=st.turn;
+    const res=tryMove(st,i,color);
+    if(!res.ok){toast(REASONS[res.reason]);return false;}
+    commit(st,i,res);
+    Sound.stone();
+    if(res.captured.length)Sound.capture();
+    this.board.fadeCaptures(res.captured,opp(color));
+    this.updateUI({lastPlaced:i});
+    return true;
+  },
+  aiTurn(){
+    this.busy=true;
+    this.updateUI();
+    setTimeout(()=>{
+      const m=aiChoose(this.st,WHITE,this.level);
+      if(!m||m.pass){
+        doPass(this.st);
+        toast("电脑停一手");
+      }else{
+        const res=tryMove(this.st,m.i,WHITE);
+        if(res.ok){
+          commit(this.st,m.i,res);
+          Sound.click(1500,0.13,0.09,"sine");
+          if(res.captured.length)Sound.capture();
+          this.board.fadeCaptures(res.captured,BLACK);
+        }
+      }
+      this.busy=false;
+      if(this.st.passes>=2){this.endByScore();return;}
+      this.updateUI({lastPlaced:this.st.lastMove});
+    },450+Math.random()*350);
+  },
+  pass(){
+    if(this.ended||this.busy)return;
+    doPass(this.st);
+    toast((this.st.turn===BLACK?"白":"黑")+"方停一手");
+    if(this.st.passes>=2){this.updateUI();this.endByScore();return;}
+    this.updateUI();
+    if(this.vsAI&&this.st.turn===WHITE)this.aiTurn();
+  },
+  undoMove(){
+    if(this.busy||!this.st.history.length)return;
+    undo(this.st,this.vsAI?2:1);
+    this.ended=false;
+    this.updateUI();
+  },
+  endByScore(){
+    this.ended=true;
+    const sc=scoreGame(this.st);
+    const diff=sc.sb-sc.sw;
+    showModal(
+      "终 局","双方连续停一手 · 中国规则",
+      `<div class="result-big">${diff>0?"黑 胜":diff<0?"白 胜":"和"}</div>
+       <table class="score-table">
+         <tr><td>黑 · 子</td><td>${sc.tb}</td></tr>
+         <tr><td>黑 · 空</td><td>${sc.terrB}</td></tr>
+         <tr><td>白 · 子</td><td>${sc.tw}</td></tr>
+         <tr><td>白 · 空</td><td>${sc.terrW}</td></tr>
+         <tr><td>白 · 贴目</td><td>${sc.komi}</td></tr>
+         <tr><td><b>合计</b></td><td><b>黑 ${sc.sb} : 白 ${sc.sw}</b></td></tr>
+       </table>
+       <div class="status-line">提示:结算前请先提净盘上死子;若结果有误,可「悔棋」恢复对局</div>`,
+      [
+        {label:"再来一局",primary:true,cb:()=>Play.newGame()},
+        {label:"悔棋复盘",cb:()=>Play.undoMove()},
+        {label:"回到棋盘",cb:()=>{}}
+      ]
+    );
+    this.updateUI();
+  }
+};
+/*==== §启动 ====*/
+function boot(){
+  Progress.load();
+  document.querySelectorAll("nav button[data-view]").forEach(b=>{
+    b.addEventListener("click",()=>{
+      document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active"));
+      b.classList.add("active");
+      document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+      el("view-"+b.dataset.view).classList.add("active");
+      Sound.click(900,0.05,0.06,"sine");
+    });
+  });
+  el("sndBtn").addEventListener("click",()=>{
+    Sound.on=!Sound.on;
+    el("sndBtn").textContent=Sound.on?"♪ 音效开":"♪ 音效关";
+  });
+  seg("segSize");
+  seg("segOpp",v=>{el("lvlRow").style.display=v==="ai"?"flex":"none";});
+  seg("segLvl");
+  el("btnNew").addEventListener("click",()=>{Play.newGame();toast("新对局开始,黑先行");});
+  el("btnPass").addEventListener("click",()=>Play.pass());
+  el("btnUndo").addEventListener("click",()=>Play.undoMove());
+  el("btnLessonRetry").addEventListener("click",()=>Learn.load(Learn.cur));
+  el("btnLessonNext").addEventListener("click",()=>Learn.next());
+  el("btnPuzReset").addEventListener("click",()=>Puzzle.load(Puzzle.cur));
+  el("btnPuzHint").addEventListener("click",()=>Puzzle.hint());
+  el("btnPuzNext").addEventListener("click",()=>{
+    if(Puzzle.cur<PUZZLES.length-1)Puzzle.load(Puzzle.cur+1);
+    else toast("五题全通!你的棋力已今非昔比 ✦");
+  });
+  Play.init();
+  Learn.init();
+  Puzzle.init();
+}
+if(typeof document!=="undefined")boot();
+</script>
+</body>
+</html>
