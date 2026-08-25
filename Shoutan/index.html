@@ -130,6 +130,10 @@ main{position:relative;z-index:2;max-width:1440px;margin:0 auto;padding:clamp(14
 .rail{flex:0 0 232px;display:flex;flex-direction:column;gap:9px;max-height:78vh;overflow-y:auto;padding-right:4px}
 .rail::-webkit-scrollbar{width:4px}
 .rail::-webkit-scrollbar-thumb{background:rgba(211,170,98,.3);border-radius:2px}
+.rail-head{
+  font-size:10px;font-weight:600;letter-spacing:.42em;color:var(--gold-dim);
+  padding:9px 4px 4px;border-bottom:1px dashed rgba(211,170,98,.16);user-select:none;
+}
 .rail-item{
   text-align:left;font-family:var(--serif);cursor:pointer;transition:.2s;width:100%;
   background:var(--card);border:1px solid var(--hairline);border-radius:10px;
@@ -184,6 +188,7 @@ main{position:relative;z-index:2;max-width:1440px;margin:0 auto;padding:clamp(14
   .panel,.rail{max-width:680px;width:100%;flex:auto}
   .rail{flex-direction:row;overflow-x:auto;max-height:none}
   .rail-item{min-width:150px}
+  .rail-head{border-bottom:none;padding:6px 8px 0;white-space:nowrap;color:var(--gold)}
 }
 </style>
 </head>
@@ -669,16 +674,18 @@ class BoardView{
 /*==== §数据:课程与死活题(9 路盘,坐标 r*9+c)====*/
 const P=(r,c)=>idx(r,c,9);
 const LESSONS=[
+/* ———— 壹 · 启蒙:认识盘上最基本的概念 ———— */
 {
-  id:"l1",num:"一",title:"初识棋盘",
-  prose:`围棋的棋盘由纵横线交叉而成，棋子要下在<strong>交叉点</strong>上，而不是格子里。九路小棋盘共有 <em>81</em> 个交叉点。标着圆点的位置叫<strong>星位</strong>，正中央那颗叫<em>天元</em>。<br><br>对局时黑先白后，轮流落子，落子后不能移动。<br><br>试试看：点击任意交叉点，落下你的第一颗棋子！`,
+  id:"l1",chap:"壹 · 启蒙",num:"一",title:"初识棋盘",sub:"落子与星位",
+  prose:`围棋的棋盘由纵横线交叉而成，棋子要下在<strong>交叉点</strong>上，而不是格子里。九路小棋盘共有 <em>81</em> 个交叉点。标着圆点的位置叫<strong>星位</strong>，正中央那颗叫<em>天元</em>。<br><br>对局时黑先白后，轮流落子，落子后不能移动、不能悔约。<br><br>试试看：点击任意交叉点，落下你的第一颗棋子！`,
   setup:[],marks:[{i:P(2,2),t:"dot"},{i:P(2,6),t:"dot"},{i:P(6,2),t:"dot"},{i:P(6,6),t:"dot"},{i:P(4,4),t:"sq"}],
   live:ctx=>`已落下 <b>${ctx.st.moveNum}</b> 颗棋子`,
-  check:ctx=>ctx.color===BLACK
+  check:ctx=>ctx.color===BLACK,
+  doneMsg:"欢迎来到黑白世界!接下来认识棋子的「生命线」。"
 },
 {
-  id:"l2",num:"二",title:"气 · 棋子的生命",
-  prose:`棋子在盘上生存靠的是「<strong>气</strong>」——与它直线紧邻的空交叉点。<br><br>中间一颗棋有 <em>4</em> 口气；贴边只剩 3 口；缩在角上就只有 2 口了。气被堵光，棋就会被提走。<br><br>盘上有一颗白子。请下一颗<strong>黑棋</strong>,堵住它的其中一口气（它的四口气质圈位置）。`,
+  id:"l2",chap:"壹 · 启蒙",num:"二",title:"气 · 棋子的生命",sub:"直线紧邻的空点",
+  prose:`棋子在盘上生存靠的是「<strong>气</strong>」——与它直线紧邻的空交叉点。<br><br>中间一颗棋有 <em>4</em> 口气；贴边只剩 3 口；缩在角上就只有 2 口了。气被堵光，棋就会被提走。<br><br>盘上有一颗白子。请下一颗<strong>黑棋</strong>,堵住它的其中一口气。`,
   setup:[{p:P(4,4),c:WHITE}],
   marks:[],
   live:ctx=>{
@@ -688,10 +695,11 @@ const LESSONS=[
   check:ctx=>{
     if(ctx.color!==BLACK)return false;
     return getGroup(ctx.st.board,P(4,4),9).libs.size<4;
-  }
+  },
+  doneMsg:"记住口诀:棋长一尺,无眼自活——气越多越安全。"
 },
 {
-  id:"l3",num:"三",title:"提 子",
+  id:"l3",chap:"壹 · 启蒙",num:"三",title:"提 子",sub:"堵最后一口气",
   prose:`当一颗棋<strong>最后一口气</strong>被堵住,它就会立刻被从棋盘上拿走,这叫「<em>提子</em>」——这是围棋里最爽快的瞬间!<br><br>角上的这颗白棋已经奄奄一息,只剩下最后一口气(虚线圈的位置)。<br><br>黑棋出手,把它提掉!`,
   setup:[{p:P(8,1),c:WHITE},{p:P(8,0),c:BLACK},{p:P(8,2),c:BLACK}],
   marks:[{i:P(7,1),t:"hint"}],
@@ -700,7 +708,7 @@ const LESSONS=[
   doneMsg:"提子成功!被提走的棋会从盘上消失。"
 },
 {
-  id:"l4",num:"四",title:"一网打尽",
+  id:"l4",chap:"壹 · 启蒙",num:"四",title:"一网打尽",sub:"整块棋共气",
   prose:`气是整块棋<strong>共用</strong>的。下面两颗连在一起的白子同气连枝,如今共享最后<em>一口</em>气。<br><br>在虚圈处落下一子,就能一口气提掉两颗白子——这就叫「双提」!`,
   setup:[{p:P(8,3),c:WHITE},{p:P(8,4),c:WHITE},{p:P(8,2),c:BLACK},{p:P(8,5),c:BLACK},{p:P(7,4),c:BLACK}],
   marks:[{i:P(7,3),t:"hint"}],
@@ -709,7 +717,7 @@ const LESSONS=[
   doneMsg:"一手两子!你已经掌握了提子的精髓。"
 },
 {
-  id:"l5",num:"五",title:"禁入点",
+  id:"l5",chap:"壹 · 启蒙",num:"五",title:"禁入点",sub:"自杀禁着",
   prose:`围棋禁止「自杀」:如果落子后自己的棋<em>没有气</em>,又吃不到对方的子,这个点就是<strong>禁入点</strong>。<br><br>左下角画 × 的空点正被白棋团团围住——先点点看它(会被拒绝!),再想想为什么。然后去把上方那颗只剩一口气的白棋提掉。`,
   setup:[{p:P(8,1),c:WHITE},{p:P(7,0),c:WHITE},{p:P(5,0),c:WHITE},{p:P(5,1),c:BLACK},{p:P(6,0),c:BLACK}],
   marks:[{i:P(8,0),t:"cross"},{i:P(4,0),t:"hint"}],
@@ -725,10 +733,40 @@ const LESSONS=[
     return s;
   },
   check:ctx=>ctx.res&&ctx.res.captured.length>0,
-  doneMsg:"提子成功!禁入点不能落子,但能提子的点永远欢迎你。"
+  doneMsg:"禁入点不能落子,但能提子的点永远欢迎你——两者只差一口气!"
 },
 {
-  id:"l6",num:"六",title:"打 劫",
+  id:"l6",chap:"壹 · 启蒙",num:"六",title:"虎 口",sub:"危险的陷阱",
+  prose:`三颗黑棋围出的这个缺口,张如虎口,故名「<strong>虎口</strong>」。棋子一旦落入虎口,立刻只剩一口气,对方随手一堵就被<em>提掉</em>,等于白白送死。<br><br>光说不练假把式——现在<strong>你执白</strong>,亲手把棋子放进虚圈处的虎口,亲身体会它的厉害!`,
+  setup:[{p:P(7,3),c:BLACK},{p:P(7,4),c:BLACK},{p:P(8,3),c:BLACK}],
+  turn:WHITE,
+  marks:[{i:P(8,4),t:"hint"}],
+  reply:(st)=>(st.lastMove===P(8,4)&&st.board[P(8,4)]===WHITE&&st.turn===BLACK)?P(8,5):null,
+  live:(ctx,flags)=>ctx.st.moveNum===0
+    ?`你正执白 · 点击虚圈处,闯入虎口`
+    :`白子已被一口吞下……`,
+  check:ctx=>ctx.color===BLACK&&!!(ctx.res&&ctx.res.captured.length>0),
+  doneMsg:"记住:虎口勿入;反过来,用「虎」来补棋却非常坚固——攻守同形。"
+},
+{
+  id:"l7",chap:"壹 · 启蒙",num:"七",title:"打吃与逃子",sub:"被围则长",
+  prose:`让对方只剩最后一口气,叫「<strong>打吃</strong>(叫吃)」;被打吃的棋若坐以待毙,下一手就会被提掉。<br><br>逃跑的办法是「<strong>长</strong>」——向空阔处再落一子,与危棋连成一体,气就多起来了。<br><br>中央这颗黑棋已被白棋三面围住,只剩最后一口气!黑先,<em>把它救出来</em>。`,
+  setup:[{p:P(4,4),c:BLACK},{p:P(3,4),c:WHITE},{p:P(5,4),c:WHITE},{p:P(4,5),c:WHITE}],
+  marks:[],
+  live:ctx=>{
+    const g=getGroup(ctx.st.board,P(4,4),9);
+    const e=countTrueEyes(ctx.st.board,BLACK,9);
+    return`被困黑棋的气:<b>${g.libs.size}</b> 口${g.libs.size<=1?" <span style=\"color:#d8593a\">· 危!</span>":g.libs.size>=3?' <span class="ok">· 已脱险!</span>':""}${e?`<br><span style="color:#d8593a">小心:往眼里逃是自寻死路。</span>`:""}`;
+  },
+  check:ctx=>{
+    if(ctx.color!==BLACK)return false;
+    return getGroup(ctx.st.board,P(4,4),9).libs.size>=3;
+  },
+  doneMsg:"长一子,气变三。逃跑要朝气多的方向长——这是基本生存术。"
+},
+/* ———— 贰 · 战术:吃子与连接的攻防手法 ———— */
+{
+  id:"l8",chap:"贰 · 战术",num:"八",title:"打 劫",sub:"禁止全局同形",
   prose:`「劫」是围棋最特别的规则。当双方可以<em>你来我往互相提一子</em>时,若允许立刻回提,对局将永远循环下去。<br><br>所以规则规定:<strong>被打劫的一方不能马上回提</strong>,必须先在别处落一手(找「劫材」),下一手才能提回来。<br><br>来体验一下:① 黑棋在虚圈处落子,提掉白子;② 轮到白棋时,试着直接回提——看看会发生什么!`,
   setup:[{p:P(8,4),c:WHITE},{p:P(8,3),c:BLACK},{p:P(7,4),c:BLACK},{p:P(8,1),c:BLACK},{p:P(8,2),c:BLACK},{p:P(8,6),c:WHITE},{p:P(7,5),c:WHITE},{p:P(8,7),c:WHITE}],
   marks:[{i:P(8,5),t:"hint"}],
@@ -741,10 +779,61 @@ const LESSONS=[
   live:(ctx,flags)=>flags.koSeen
     ?`<span class="ok">✓ 你已亲身体验了劫的规则</span>`
     :(ctx.st.ko!=null?"劫争进行中…白棋想立刻回提?试试点击刚才被提的位置!":"按提示完成黑棋的提子"),
-  check:(ctx,flags)=>!!flags.koSeen
+  check:(ctx,flags)=>!!flags.koSeen,
+  doneMsg:"劫材的多寡常决定一局胜负——「劫胜」者可借劫横行天下。"
 },
 {
-  id:"l7",num:"七",title:"做两只眼",
+  id:"l9",chap:"贰 · 战术",num:"九",title:"连接与切断",sub:"棋连则强",
+  prose:`两块棋分开时各自有弱点,连成一体则坚不可摧;反过来,<em>切断</em>对方的联络,就能分而治之。棋谚云:「<strong>棋从断处生</strong>」。<br><br>下方左右两块黑棋之间只隔一个空点(虚圈处),白棋正虎视眈眈。<br><br>黑先:<strong>抢先把棋连上</strong>!`,
+  setup:[{p:P(4,2),c:BLACK},{p:P(4,3),c:BLACK},{p:P(4,5),c:BLACK},{p:P(4,6),c:BLACK},{p:P(3,4),c:WHITE},{p:P(5,4),c:WHITE}],
+  marks:[{i:P(4,4),t:"hint"}],
+  live:ctx=>{
+    const g=getGroup(ctx.st.board,P(4,2),9);
+    const joined=g.stones.includes(P(4,6));
+    return`左右两块黑棋:${joined?'<span class="ok">已连为一体 ✓</span>':'仍是两块 · 在虚圈处落子'}`;
+  },
+  check:ctx=>{
+    if(ctx.color!==BLACK)return false;
+    return getGroup(ctx.st.board,P(4,2),9).stones.includes(P(4,6));
+  },
+  doneMsg:"连则强,断则乱。实战中,补断点永远是值得考虑的一手。"
+},
+{
+  id:"l10",chap:"贰 · 战术",num:"十",title:"征 子",sub:"一路押到边线",
+  prose:`「<strong>征子</strong>」,俗称「扭羊头」:对对方连续打吃,让它每逃一步都只有两口气,像滚楼梯一样一路<em>赶到边线</em>,全歼收场。<br><br>征子前务必看清路上有没有对方的接应棋子——「<strong>征子不利</strong>」时切勿开征!<br><br>本课已为你沿三路铺好「梯骨」。黑先,从虚圈处开始打吃,一步步把白棋押往边线!(白棋会挣扎逃跑)`,
+  setup:[{p:P(2,2),c:WHITE},{p:P(1,2),c:BLACK},{p:P(2,3),c:BLACK},{p:P(3,3),c:BLACK},{p:P(4,3),c:BLACK},{p:P(5,3),c:BLACK},{p:P(6,3),c:BLACK},{p:P(7,3),c:BLACK},{p:P(8,3),c:BLACK}],
+  marks:[{i:P(2,1),t:"hint"}],
+  reply:(st,flags)=>{
+    const m=aiChoose(st,WHITE,"hard");
+    return(m&&!m.pass)?m.i:null;
+  },
+  live:ctx=>`白棋气数:<b>${getGroup(ctx.st.board,P(2,2),9).libs.size}</b> · 手数 ${ctx.st.moveNum}<br><span style="opacity:.75">持续打吃,别让它喘过气来</span>`,
+  check:ctx=>ctx.res&&ctx.res.captured.length>0,
+  doneMsg:"征子成立!注意:实战中第一手方向选错,羊头就会反咬一口。"
+},
+{
+  id:"l11",chap:"贰 · 战术",num:"十一",title:"倒 扑",sub:"弃一子吃一片",
+  prose:`「<strong>扑</strong>」是在对方虎口里<em>故意送吃</em>的一手;送进去被提掉后,对方整块棋反而撞紧了气,露出破绽——随即被一网打尽,这便是「<strong>倒扑</strong>」。<br><br>第一步:在虚圈处「扑」,故意把子送给白棋吃;<br>第二步:等它提子后,在原位<em>再落一子</em>,把整块白棋全部提回来!`,
+  setup:[{p:P(3,3),c:WHITE},{p:P(3,4),c:WHITE},{p:P(3,5),c:WHITE},{p:P(4,3),c:WHITE},{p:P(4,5),c:WHITE},{p:P(5,3),c:WHITE},{p:P(5,5),c:WHITE},{p:P(6,3),c:WHITE},{p:P(6,4),c:WHITE},{p:P(6,5),c:WHITE},
+    {p:P(2,2),c:BLACK},{p:P(2,3),c:BLACK},{p:P(2,4),c:BLACK},{p:P(2,5),c:BLACK},{p:P(2,6),c:BLACK},{p:P(3,2),c:BLACK},{p:P(3,6),c:BLACK},{p:P(4,2),c:BLACK},{p:P(4,6),c:BLACK},{p:P(5,2),c:BLACK},{p:P(5,6),c:BLACK},{p:P(6,2),c:BLACK},{p:P(6,6),c:BLACK},{p:P(7,2),c:BLACK},{p:P(7,3),c:BLACK},{p:P(7,4),c:BLACK},{p:P(7,5),c:BLACK},{p:P(7,6),c:BLACK}],
+  marks:[{i:P(4,4),t:"hint"}],
+  live:ctx=>{
+    const m=ctx.st.moveNum;
+    if(m===0)return`第①步:在虚圈处「扑」——放心,送吃也是好棋`;
+    if(m===1)return`白棋正在应…`;
+    return`白棋果然提走了你的子!它的整块棋如今只剩一口气<br>第②步:在原位再落子,<strong>全提回来</strong>!`;
+  },
+  reply:(st)=>{
+    if(st.lastMove!==P(4,4)||st.board[P(4,4)]!==BLACK||st.turn!==WHITE)return null;
+    const r=tryMove(st,P(5,4),WHITE);
+    return r.ok?P(5,4):null;
+  },
+  check:ctx=>ctx.res&&ctx.res.captured.length>=2,
+  doneMsg:"倒扑成立!「宁失数子,不失一先」——弃子是为了更大的收获。"
+},
+/* ———— 叁 · 死活:做眼与杀棋的攻防 —— */
+{
+  id:"l12",chap:"叁 · 死活",num:"十二",title:"做两只眼",sub:"直三点眼",
   prose:`被包围的棋怎样才算安全?<strong>有两只真眼</strong>!两个独立完整的眼位,对方无法同时填掉(填一个眼自己也是自杀),这就是<em>活棋</em>。<br><br>眼下黑棋的眼位是底边三格直排的「<strong>直三</strong>」——抢占<em>正中一点</em>,一分为二,即成两眼!<br><br>黑先,救活这条被围住的小龙吧。`,
   setup:[{p:P(7,4),c:BLACK},{p:P(7,5),c:BLACK},{p:P(7,6),c:BLACK},{p:P(7,7),c:BLACK},{p:P(7,8),c:BLACK},{p:P(8,4),c:BLACK},{p:P(8,8),c:BLACK},{p:P(6,4),c:WHITE},{p:P(6,5),c:WHITE},{p:P(6,6),c:WHITE},{p:P(6,7),c:WHITE},{p:P(6,8),c:WHITE}],
   marks:[{i:P(8,6),t:"hint"}],
@@ -754,40 +843,141 @@ const LESSONS=[
   },
   check:ctx=>ctx.color===BLACK&&countTrueEyes(ctx.st.board,BLACK,9)>=2,
   doneMsg:"两眼活棋!从此你的棋有了安身立命之本。"
+},
+{
+  id:"l13",chap:"叁 · 死活",num:"十三",title:"点杀弯三",sub:"大眼的要点",
+  prose:`大眼的死活各有「要点」:<strong>直三、曲三、丁四</strong>都只有一个致命点——谁先抢占谁掌握生死。<br><br>这块白棋的眼位是一个「<strong>弯三</strong>(曲三)」:黑棋只要点在<em>弯心</em>一处,白棋整块便只剩两口气,再也做不出两只眼,必死无疑!<br><br>黑先,点在要害上。(白棋会垂死挣扎)`,
+  setup:[{p:P(1,4),c:WHITE},{p:P(1,5),c:WHITE},{p:P(1,6),c:WHITE},{p:P(2,4),c:WHITE},{p:P(2,6),c:WHITE},{p:P(3,4),c:WHITE},{p:P(4,4),c:WHITE},{p:P(4,5),c:WHITE},{p:P(4,6),c:WHITE},
+    {p:P(0,3),c:BLACK},{p:P(0,4),c:BLACK},{p:P(0,5),c:BLACK},{p:P(0,6),c:BLACK},{p:P(0,7),c:BLACK},{p:P(1,3),c:BLACK},{p:P(1,7),c:BLACK},{p:P(2,3),c:BLACK},{p:P(2,7),c:BLACK},{p:P(3,3),c:BLACK},{p:P(3,7),c:BLACK},{p:P(4,3),c:BLACK},{p:P(4,7),c:BLACK},{p:P(5,3),c:BLACK},{p:P(5,4),c:BLACK},{p:P(5,5),c:BLACK},{p:P(5,6),c:BLACK}],
+  marks:[{i:P(3,5),t:"hint"}],
+  reply:(st,flags)=>{
+    const m=aiChoose(st,WHITE,"hard");
+    return(m&&!m.pass)?m.i:null;
+  },
+  live:ctx=>{
+    const g=getGroup(ctx.st.board,P(1,4),9);
+    let s=`白棋大眼的气:<b>${g.libs.size}</b>`;
+    if(g.libs.size<=1)s+=` <span class="ok">· 要点已夺,插翅难飞</span>`;
+    s+=`<br><span style="opacity:.75">点在弯心后,继续收紧,直到白棋只剩最后一口气</span>`;
+    return s;
+  },
+  check:ctx=>{
+    if(ctx.color!==BLACK||!ctx.res)return false;
+    if(ctx.st.board[P(1,4)]!==WHITE)return true;
+    return getGroup(ctx.st.board,P(1,4),9).libs.size<=1;
+  },
+  doneMsg:"方四没有要点,不必点杀已是死棋;而板六、曲四则点不死——大眼死活,变化万千。"
+},
+/* ———— 肆 · 大局:布局与收官的全盘观 ———— */
+{
+  id:"l14",chap:"肆 · 大局",num:"十四",title:"金角银边草肚皮",sub:"布局的方向感",
+  prose:`布局谚语:「<strong>金角、银边、草肚皮</strong>」——同样围十目地,角上用子最少,边上次之,中腹最费。<br><br>第三、第四线是最常见的「实利线」:第三线取实地,第四线取势力。开局从<strong>角</strong>下起,再向两边拆开,最后才进入中腹。<br><br>黑先:在靠近边角的三、四线上,任选一个好点落下第一子!(贴着一线下或挤在中央都不算好棋哦)`,
+  setup:[],marks:[{i:P(2,2),t:"dot"},{i:P(2,6),t:"dot"},{i:P(6,2),t:"dot"},{i:P(6,6),t:"dot"},{i:P(4,4),t:"sq"}],
+  live:ctx=>{
+    const[r,c]=rc(ctx.st.lastMove==null?-1:ctx.st.lastMove,9);
+    const line=ctx.st.lastMove==null?99:Math.min(r,8-r,c,8-c);
+    return ctx.st.moveNum===0?`思考一下:哪里效率最高?`:
+      line>=1&&line<=3?`落在第 ${line===Math.min(r,8-r)?(r<4?r+1:8-r+1):(c<4?c+1:8-c+1)} 线 · <span class="ok">好点!</span>`
+      :`这手离边角太近或太远了些…重来试试三、四线`;
+  },
+  check:ctx=>{
+    if(ctx.color!==BLACK||ctx.idx==null)return false;
+    const[r,c]=rc(ctx.idx,9);
+    const line=Math.min(r,8-r,c,8-c);
+    return line>=1&&line<=3;
+  },
+  doneMsg:"星位、小目、三三都是经典的第一手。布局定式,以后慢慢积累。"
+},
+{
+  id:"l15",chap:"肆 · 大局",num:"十五",title:"收官与数子",sub:"终局的中国规则",
+  prose:`一盘棋的最后阶段叫「<strong>官子</strong>」:把边界一一收拢,不让实地漏风。差一手,边界就千疮百孔。<br><br>中国规则采用<strong>数子法</strong>:终局时,你的「子」加上你的「空」就是总得分;黑棋还要贴给白棋 <em>6½</em> 目作为先行补偿。双方接连<strong>停一手</strong>,即告终局、自动结算。<br><br>左下的黑阵还留着一个缺口(虚圈处)。黑先:把它关严实,看看黑空涨到多少!`,
+  setup:[{p:P(6,0),c:BLACK},{p:P(6,1),c:BLACK},{p:P(6,2),c:BLACK},{p:P(6,3),c:BLACK},{p:P(6,4),c:BLACK},{p:P(7,5),c:BLACK},{p:P(8,5),c:BLACK},{p:P(0,7),c:WHITE},{p:P(0,8),c:WHITE},{p:P(1,8),c:WHITE}],
+  marks:[{i:P(6,5),t:"hint"}],
+  live:ctx=>{
+    const sc=scoreGame(ctx.st);
+    return`黑空(目):<b>${sc.terrB}</b>${sc.terrB>=10?' <span class="ok">· 边界完整!</span>':"(缺口漏风中…)"}<br><span style="opacity:.75">黑 ${sc.sb} : 白 ${sc.sw}(含贴目)</span>`;
+  },
+  check:ctx=>ctx.color===BLACK&&scoreGame(ctx.st).terrB>=10,
+  doneMsg:"恭喜修完全部课程!去「死活题」检验身手,再与电脑真刀真枪下一局吧 ✦"
 }
 ];
 const PUZZLES=[
 {
-  id:"p1",stars:"★",title:"边路双提",
+  id:"p1",stars:"★",cat:"吃子",title:"边路双提",
   prose:`边路上两颗白子连成一体,共享着最后<em>一口气</em>。<br><br>黑先:找到那口气,一手提两子!`,
   setup:[{p:P(0,6),c:WHITE},{p:P(0,7),c:WHITE},{p:P(0,5),c:BLACK},{p:P(0,8),c:BLACK},{p:P(1,6),c:BLACK}],
   success:"capture"
 },
 {
-  id:"p2",stars:"★★",title:"一石二鸟",
+  id:"p6",stars:"★",cat:"吃子",title:"角上拔子",
+  prose:`角上的这颗白子只剩最后一口气了——找到它,一手拔掉!<br><br>黑先。`,
+  setup:[{p:P(8,0),c:WHITE},{p:P(8,1),c:BLACK}],
+  success:"capture"
+},
+{
+  id:"p2",stars:"★★",cat:"吃子",title:"一石二鸟",
   prose:`两块白棋都只剩摇摇欲坠的气。有一个绝妙的交叉点,<strong>一子落下同时打吃两块白棋</strong>——找到它!`,
   setup:[{p:P(3,4),c:WHITE},{p:P(4,3),c:WHITE},{p:P(4,5),c:WHITE},{p:P(2,4),c:BLACK},{p:P(3,3),c:BLACK},{p:P(3,5),c:BLACK},{p:P(4,2),c:BLACK},{p:P(4,6),c:BLACK},{p:P(5,3),c:BLACK}],
   success:"capture"
 },
 {
-  id:"p3",stars:"★★",title:"直三做眼",
+  id:"p7",stars:"★★",cat:"吃子",title:"关门吃",
+  prose:`两颗白子被困在黑阵之中,只剩两个相邻的气点。像关门一样<em>堵住门口</em>,让它们无处可逃!<br><br><b style="color:#d8593a">白棋会挣扎反击,小心应对。</b>`,
+  setup:[{p:P(3,3),c:WHITE},{p:P(4,3),c:WHITE},{p:P(2,3),c:BLACK},{p:P(3,2),c:BLACK},{p:P(5,3),c:BLACK},{p:P(4,2),c:BLACK},{p:P(2,4),c:BLACK},{p:P(5,4),c:BLACK},{p:P(4,5),c:BLACK}],
+  success:"capture"
+},
+{
+  id:"p3",stars:"★★",cat:"死活",title:"直三做眼",
   prose:`黑棋被白棋封锁,眼位是一个「<strong>直三</strong>」——三格直排的空。<br><br>抢占正中一点,把一眼分成两眼,即成活棋!`,
   setup:[{p:P(0,4),c:BLACK},{p:P(0,8),c:BLACK},{p:P(1,4),c:BLACK},{p:P(1,5),c:BLACK},{p:P(1,6),c:BLACK},{p:P(1,7),c:BLACK},{p:P(1,8),c:BLACK},{p:P(2,4),c:WHITE},{p:P(2,5),c:WHITE},{p:P(2,6),c:WHITE},{p:P(2,7),c:WHITE},{p:P(2,8),c:WHITE}],
   anchor:P(1,5),
   success:"eyes"
 },
 {
-  id:"p4",stars:"★★",title:"瓮中捉鳖",
+  id:"p4",stars:"★★",cat:"死活",title:"瓮中捉鳖",
   prose:`黑棋已布下天罗地网,大块白棋被困在中央的狭小空间里,只剩<em>两口气</em>。<br><br>收紧口袋——注意别把自己的棋送进虎口!<br><br><b style="color:#d8593a">白棋由 AI 应对,会拼死突围。</b>`,
   setup:[{p:P(4,4),c:WHITE},{p:P(5,4),c:WHITE},{p:P(3,4),c:BLACK},{p:P(4,3),c:BLACK},{p:P(4,5),c:BLACK},{p:P(5,5),c:BLACK},{p:P(6,3),c:BLACK},{p:P(6,5),c:BLACK},{p:P(7,3),c:BLACK},{p:P(7,5),c:BLACK},{p:P(8,4),c:BLACK}],
   success:"capture"
 },
 {
-  id:"p5",stars:"★★★",title:"曲三点眼",
+  id:"p5",stars:"★★★",cat:"死活",title:"曲三点眼",
   prose:`「曲三」是<em>拐弯</em>的三格眼位。与直三同理,抢下<strong>弯心一点</strong>,即得两眼。<br><br>黑先,做活这块棋!`,
   setup:[{p:P(0,2),c:BLACK},{p:P(1,1),c:BLACK},{p:P(1,2),c:BLACK},{p:P(2,0),c:BLACK},{p:P(2,1),c:BLACK},{p:P(0,3),c:WHITE},{p:P(2,2),c:WHITE},{p:P(2,3),c:WHITE}],
   anchor:P(1,1),
   success:"eyes"
+},
+{
+  id:"p8",stars:"★★★",cat:"死活",title:"丁四点眼",
+  prose:`「<strong>丁四</strong>」是丁字形的三格眼位——虽比曲三多一格,但同样只有<em>一个要点</em>:丁字相交的中心。<br><br>抢占它,一眼立变三眼!黑先做活。`,
+  setup:[{p:P(6,3),c:BLACK},{p:P(6,4),c:BLACK},{p:P(6,5),c:BLACK},{p:P(6,6),c:BLACK},{p:P(7,3),c:BLACK},{p:P(7,7),c:BLACK},{p:P(8,3),c:BLACK},{p:P(8,4),c:BLACK},{p:P(8,6),c:BLACK},{p:P(8,7),c:BLACK},{p:P(0,0),c:WHITE},{p:P(0,1),c:WHITE}],
+  anchor:P(7,5),
+  success:"eyes"
+},
+{
+  id:"p9",stars:"★★★",cat:"吃子",title:"征 吃",
+  prose:`「征吃」就是实战里的<strong>征子</strong>:连续打吃,把对方一路押往边线全歼。<br><br>黑阵沿三路早已铺好「梯骨」。黑先,从虚圈方向开始打吃,一步一步来,别让白棋喘息!<br><br><b style="color:#d8593a">白棋会拼命奔逃。</b>`,
+  setup:[{p:P(2,2),c:WHITE},{p:P(1,2),c:BLACK},{p:P(2,3),c:BLACK},{p:P(3,3),c:BLACK},{p:P(4,3),c:BLACK},{p:P(5,3),c:BLACK},{p:P(6,3),c:BLACK},{p:P(7,3),c:BLACK},{p:P(8,3),c:BLACK}],
+  anchor:P(2,1),
+  success:"capture"
+},
+{
+  id:"p10",stars:"★★★★",cat:"吃子",title:"倒 扑",
+  prose:`整块白棋看似有两口气,实则暗藏杀机:<strong>先「扑」进去送一颗子</strong>,等它提掉后,它的气反而被撞紧——再原位一落子,<em>整块全提</em>!<br><br>黑先:第一步大胆送吃!(被提一子不算失败)`,
+  setup:[{p:P(3,3),c:WHITE},{p:P(3,4),c:WHITE},{p:P(3,5),c:WHITE},{p:P(4,3),c:WHITE},{p:P(4,5),c:WHITE},{p:P(5,3),c:WHITE},{p:P(5,5),c:WHITE},{p:P(6,3),c:WHITE},{p:P(6,4),c:WHITE},{p:P(6,5),c:WHITE},
+    {p:P(2,2),c:BLACK},{p:P(2,3),c:BLACK},{p:P(2,4),c:BLACK},{p:P(2,5),c:BLACK},{p:P(2,6),c:BLACK},{p:P(3,2),c:BLACK},{p:P(3,6),c:BLACK},{p:P(4,2),c:BLACK},{p:P(4,6),c:BLACK},{p:P(5,2),c:BLACK},{p:P(5,6),c:BLACK},{p:P(6,2),c:BLACK},{p:P(6,6),c:BLACK},{p:P(7,2),c:BLACK},{p:P(7,3),c:BLACK},{p:P(7,4),c:BLACK},{p:P(7,5),c:BLACK},{p:P(7,6),c:BLACK}],
+  anchor:P(4,4),
+  tolerant:true,
+  reply:(st)=>(st.lastMove===P(4,4)&&st.board[P(4,4)]===BLACK&&st.turn===WHITE)?P(5,4):null,
+  success:"capture"
+},
+{
+  id:"p11",stars:"★★★★",cat:"死活",title:"点杀弯三",
+  prose:`这块白棋的眼位是一个「<strong>弯三</strong>」——大眼中藏着唯一的<em>要害</em>。点在弯心,白棋便做不出两只眼;再收紧一气,整块白棋即告死亡!<br><br>黑先:先点要害,再把大眼<em>逼到只剩最后一口气</em>。<br><br><b style="color:#d8593a">白棋会垂死挣扎,小心它反扑。</b>`,
+  setup:[{p:P(1,4),c:WHITE},{p:P(1,5),c:WHITE},{p:P(1,6),c:WHITE},{p:P(2,4),c:WHITE},{p:P(2,6),c:WHITE},{p:P(3,4),c:WHITE},{p:P(4,4),c:WHITE},{p:P(4,5),c:WHITE},{p:P(4,6),c:WHITE},
+    {p:P(0,3),c:BLACK},{p:P(0,4),c:BLACK},{p:P(0,5),c:BLACK},{p:P(0,6),c:BLACK},{p:P(0,7),c:BLACK},{p:P(1,3),c:BLACK},{p:P(1,7),c:BLACK},{p:P(2,3),c:BLACK},{p:P(2,7),c:BLACK},{p:P(3,3),c:BLACK},{p:P(3,7),c:BLACK},{p:P(4,3),c:BLACK},{p:P(4,7),c:BLACK},{p:P(5,3),c:BLACK},{p:P(5,4),c:BLACK},{p:P(5,5),c:BLACK},{p:P(5,6),c:BLACK}],
+  anchor:P(3,5),
+  killAnchor:P(1,4),
+  success:"capture"
 }
 ];
 /*==== §应用:通用 UI(弹窗/提示/进度)====*/
@@ -848,7 +1038,16 @@ function seg(id,cb){
 function railRender(boxId,items,curKey,doneKey,onPick){
   const box=el(boxId);
   box.innerHTML="";
+  let lastHead=null;
   items.forEach((it,k)=>{
+    const head=it.chap||it.cat;
+    if(head&&head!==lastHead){
+      lastHead=head;
+      const h=document.createElement("div");
+      h.className="rail-head";
+      h.textContent=head;
+      box.appendChild(h);
+    }
     const b=document.createElement("button");
     b.className="rail-item"+(k===curKey?" on":"")+(Progress.data[doneKey].includes(it.id)?" done":"");
     b.innerHTML=`<span class="num">${it.num||k+1}</span>${it.title}<small>${it.sub||""}</small>`;
@@ -868,6 +1067,7 @@ const Learn={
     const L=LESSONS[k];
     this.st=newState(9);
     applySetup(this.st,L.setup);
+    if(L.turn)this.st.turn=L.turn;
     this.flags={};
     this.done=false;
     this.board.setSize(9);
@@ -879,9 +1079,9 @@ const Learn={
   },
   marks(){
     const L=LESSONS[this.cur];
-    let m=L.marks?L.marks.slice():[];
-    if(L.id==="l6"&&this.st.ko!=null)m=[{i:this.st.ko,t:"hint"}];
-    else if(L.id==="l6"&&this.st.moveNum>0)m=[];
+    let m=typeof L.marks==="function"?L.marks.call(L):(L.marks?L.marks.slice():[]);
+    if(L.id==="l8"&&this.st.ko!=null)m=[{i:this.st.ko,t:"hint"}];
+    else if(L.id==="l8"&&this.st.moveNum>0)m=[];
     return m;
   },
   render(extra){
@@ -908,7 +1108,21 @@ const Learn={
     if(res.captured.length)Sound.capture();
     this.board.fadeCaptures(res.captured,opp(color));
     this.tryComplete({st,idx:i,res,color,flags:this.flags});
+    if(!this.done&&L.reply)this.autoReply(L);
     this.render({lastPlaced:i});
+  },
+  autoReply(L){
+    const st=this.st;
+    const mv=L.reply(st,this.flags);
+    if(mv==null)return;
+    const wc=st.turn;
+    const wres=tryMove(st,mv,wc);
+    if(!wres.ok)return;
+    commit(st,mv,wres);
+    Sound.click(1500,0.12,0.09,"sine");
+    if(wres.captured.length)Sound.capture();
+    this.board.fadeCaptures(wres.captured,opp(wc));
+    this.tryComplete({st,idx:mv,res:wres,color:wc,flags:this.flags});
   },
   tryComplete(ctx){
     const L=LESSONS[this.cur];
@@ -921,7 +1135,7 @@ const Learn={
       el("btnLessonNext").disabled=false;
     }
   },
-  next(){if(this.cur<LESSONS.length-1)this.load(this.cur+1);else toast("七课全部完成!去「死活题」检验身手吧 ✦")}
+  next(){if(this.cur<LESSONS.length-1)this.load(this.cur+1);else toast("十五课全部完成!去「死活题」检验身手吧 ✦")}
 };
 /*==== §控制器:死活题 ====*/
 const Puzzle={
@@ -946,8 +1160,8 @@ const Puzzle={
   render(extra){
     const pz=PUZZLES[this.cur];
     el("puzTitle").innerHTML="第 "+(this.cur+1)+" 题 · "+pz.title;
-    el("puzStars").textContent="难度 "+pz.stars+" · 黑先";
-    let s="黑先。"+(pz.success==="capture"?"目标:<b>提掉白棋</b>":"目标:<b>做出两只真眼</b>");
+    el("puzStars").textContent="难度 "+pz.stars+" · "+(pz.cat||"手筋")+" · 黑先";
+    let s=pz.killAnchor?"黑先。目标:<b>点杀白棋大眼</b>(收紧至只剩一气)":("黑先。"+(pz.success==="capture"?"目标:<b>提掉白棋</b>":"目标:<b>做出两只真眼</b>"));
     if(this.solved)s=`<div class="seal-pass">解</div><span class="ok">正解!</span><br>你已破解此题。`;
     else if(this.failed)s=`<span style="color:#d8593a">✗ ${this.failMsg}</span><br>点击「重做」再试一次。`;
     else if(pz.success==="eyes")s+=`<br>黑棋真眼:<b>${countTrueEyes(this.st.board,BLACK,9)}</b> 只(需两只)`;
@@ -965,12 +1179,19 @@ const Puzzle={
     Sound.stone();
     if(res.captured.length)Sound.capture();
     this.board.fadeCaptures(res.captured,WHITE);
+    if(pz.killAnchor!=null){
+      if(st.board[pz.killAnchor]!==WHITE){this.win();return;}
+      const kg=getGroup(st.board,pz.killAnchor,st.n);
+      if(kg.libs.size<=1){this.win();return;}
+    }
     if(res.captured.length>0){this.win();return;}
     if(pz.success==="eyes"&&countTrueEyes(st.board,BLACK,9)>=2){this.win();return;}
     this.render({lastPlaced:i});
     this.busy=true;
     setTimeout(()=>{
-      const m=aiChoose(st,WHITE,"hard");
+      let m=null;
+      const forced=pz.reply?pz.reply(st):null;
+      m=forced!=null?{i:forced}:aiChoose(st,WHITE,"hard");
       if(m&&!m.pass){
         const wres=tryMove(st,m.i,WHITE);
         if(wres.ok){
@@ -978,13 +1199,14 @@ const Puzzle={
           Sound.click(1500,0.12,0.09,"sine");
           if(wres.captured.length)Sound.capture();
           this.board.fadeCaptures(wres.captured,BLACK);
-          if(wres.captured.length>0){
+          if(wres.captured.length>0&&!pz.tolerant){
             this.busy=false;
             this.failMsg="白棋提掉了你的子!";
             this.failed=true;
             this.render();
             return;
           }
+          if(wres.captured.length>0)toast("白棋提掉了你的「扑」——别慌,这正是计划的一部分!");
         }
       }else{
         doPass(st);
@@ -1010,6 +1232,11 @@ const Puzzle={
   hint(){
     if(this.solved||this.failed)return;
     const pz=PUZZLES[this.cur];
+    if(pz.anchor!=null&&this.st.board[pz.anchor]===EMPTY){
+      toast("提示:要点在 "+fmtCoord(pz.anchor,9)+" 位——想想为什么是这里");
+      this.render({hintMark:pz.anchor});
+      return;
+    }
     if(pz.success==="capture"){
       for(let i=0;i<81;i++){
         if(this.st.board[i]!==EMPTY)continue;
@@ -1177,7 +1404,7 @@ function boot(){
   el("btnPuzHint").addEventListener("click",()=>Puzzle.hint());
   el("btnPuzNext").addEventListener("click",()=>{
     if(Puzzle.cur<PUZZLES.length-1)Puzzle.load(Puzzle.cur+1);
-    else toast("五题全通!你的棋力已今非昔比 ✦");
+    else toast(PUZZLES.length+" 题全通!你的棋力已今非昔比 ✦");
   });
   Play.init();
   Learn.init();
