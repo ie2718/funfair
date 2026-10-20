@@ -2,8 +2,9 @@
 'use strict';
 require('../js/engine.js');
 require('../js/ai.js');
+require('../js/kifu-data.js');
 
-const { GoEngine, GoAI } = globalThis;
+const { GoEngine, GoAI, KIFU } = globalThis;
 const B = GoEngine.BLACK, W = GoEngine.WHITE;
 let failed = 0;
 
@@ -113,6 +114,41 @@ for (const lvl of [0, 1, 3]) {
     if (!e.play(wx, wy, W, { force: true }).legal) break;
   }
   ok(!filled, '高级 AI 不填自家真眼');
+}
+
+console.log('- 名局谱数据 -');
+{
+  ok(KIFU && KIFU.count >= 100, `收录棋谱不少于 100 局（实得 ${KIFU.count} 局）`);
+  ok(KIFU.games.every(g => g.s && g.s.length % 2 === 0), '着法流长度均为偶数');
+  const years = KIFU.games.map(g => g.y).filter(Boolean);
+  ok(Math.min(...years) >= 1600 && Math.max(...years) <= 2020, `对局年份区间合理（${Math.min(...years)}–${Math.max(...years)}）`);
+
+  // 全量重放：布子 + 逐手走子，任何非法着都视为数据损坏
+  let replayed = 0, stones = 0;
+  for (const g of KIFU.games) {
+    const e = new GoEngine(19);
+    if (g.ab) {
+      for (let k = 0; k < g.ab.length; k += 2) {
+        e.board[e.idx(g.ab.charCodeAt(k) - 97, g.ab.charCodeAt(k + 1) - 97)] = B;
+      }
+      e.positionHistory = [e._boardString(e.board)];
+    }
+    let color = g.hc ? W : B;
+    for (let k = 0; k < g.s.length; k += 2) {
+      const c1 = g.s[k], c2 = g.s[k + 1];
+      if (c1 === 'z' && c2 === 'z') {
+        e.pass(color, { force: true });
+      } else {
+        const x = c1.charCodeAt(0) - 97, y = c2.charCodeAt(0) - 97;
+        const r = e.play(x, y, color, { force: true });
+        if (!r.legal) throw new Error(`棋谱 ${g.b} vs ${g.w}（${g.dt || ''}）第 ${k / 2 + 1} 手 (${x},${y}) 非法`);
+        stones += r.captured.length;
+      }
+      color = color === B ? W : B;
+    }
+    replayed++;
+  }
+  ok(replayed === KIFU.count, `全部 ${replayed} 局重放通过规则引擎校验（累计提子 ${stones}）`);
 }
 
 console.log(failed === 0 ? '\n全部通过 ✓' : `\n${failed} 项失败 ✗`);

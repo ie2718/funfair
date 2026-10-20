@@ -1,0 +1,10 @@
+{
+  "id": "preview-1787585970326-fv3pem0z5",
+  "name": "funfair",
+  "version": "0.0.0-preview",
+  "description": "",
+  "type": "ui",
+  "entry": {
+    "ui": "index.html"
+  }
+}

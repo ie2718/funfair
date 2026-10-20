@@ -83,6 +83,10 @@
       global.Tutorial.renderList($('#lesson-list'));
       App.show('screen-learn');
     });
+    $('#btn-go-kifu').addEventListener('click', () => {
+      global.KifuCtl.renderList();
+      App.show('screen-kifu-list');
+    });
     $$('.back-home').forEach(b => b.addEventListener('click', () => App.show('screen-home')));
     $('#btn-learn-back').addEventListener('click', () => App.show('screen-home'));
   }
@@ -146,6 +150,17 @@
       if (w && h) lv.resize(Math.floor(Math.min(w, h)));
     };
     new ResizeObserver(lro).observe(lwrap);
+
+    // 名局打谱棋盘
+    const kwrap = $('#kifu-board-wrap');
+    const kcv = $('#kifu-board');
+    const kv = new global.BoardView(kcv);
+    global.KifuCtl.init(kv);
+    const kro = () => {
+      const w = kwrap.clientWidth, h = kwrap.clientHeight;
+      if (w && h) kv.resize(Math.floor(Math.min(w, h)));
+    };
+    new ResizeObserver(kro).observe(kwrap);
 
     // 默认棋盘展示（首页背景无棋盘，教程列表页给个空盘做装饰）
     lv.setSize(9);

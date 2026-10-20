@@ -813,6 +813,233 @@ button { font-family: var(--serif); cursor: pointer; }
   to { transform: rotate(-7deg) scale(1); }
 }
 
+/* ============ 名局 · 目录 ============ */
+
+.kifu-tools {
+  max-width: 640px;
+  margin: 18px auto 0;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.kf-search {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--paper);
+  font-family: var(--serif);
+  font-size: 14.5px;
+  letter-spacing: 0.1em;
+  padding: 11px 16px;
+  outline: none;
+  transition: border-color 0.25s;
+}
+.kf-search::placeholder { color: var(--paper-3); letter-spacing: 0.18em; }
+.kf-search:focus { border-color: rgba(201, 163, 95, 0.5); }
+
+.seg-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.seg-btns button {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--paper-3);
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  padding: 7px 15px;
+  transition: all 0.25s var(--ease);
+}
+.seg-btns button:hover { border-color: rgba(201, 163, 95, 0.45); color: var(--gold-hi); }
+.seg-btns button.on {
+  background: rgba(200, 65, 47, 0.16);
+  border-color: rgba(200, 65, 47, 0.5);
+  color: var(--gold-hi);
+  box-shadow: inset 0 0 0 1px rgba(200, 65, 47, 0.28);
+}
+
+.kifu-catalog {
+  max-width: 640px;
+  margin: 16px auto 40px;
+  padding: 0 24px 24px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.kf-card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 15px 20px;
+  background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+  border: 1px solid var(--line-soft);
+  border-radius: 11px;
+  color: var(--paper);
+  text-align: left;
+  transition: all 0.3s var(--ease);
+}
+.kf-card:hover {
+  border-color: rgba(201, 163, 95, 0.45);
+  transform: translateX(6px);
+  background: linear-gradient(180deg, var(--bg-3), var(--bg-2));
+}
+.kf-card.on { border-color: rgba(200, 65, 47, 0.5); box-shadow: inset 0 0 0 1px rgba(200, 65, 47, 0.2); }
+
+.kf-era-tag {
+  flex: none;
+  width: 44px;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  text-align: center;
+  border: 1px solid rgba(201, 163, 95, 0.3);
+  border-radius: 6px;
+  padding: 5px 0 4px;
+}
+.kf-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.kf-players { font-size: 15.5px; letter-spacing: 0.08em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kf-players i { font-style: normal; color: var(--paper-3); font-size: 12.5px; margin: 0 8px; }
+.kf-meta {
+  font-size: 12.5px;
+  color: var(--paper-3);
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kf-result {
+  margin-left: auto;
+  flex: none;
+  font-size: 12.5px;
+  color: var(--paper-3);
+  letter-spacing: 0.06em;
+  max-width: 108px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kf-card.on .kf-result, .kf-card:hover .kf-result { color: var(--gold-hi); }
+.kifu-src {
+  max-width: 640px;
+  margin: 0 auto 46px;
+  padding: 0 24px;
+  font-size: 12px;
+  color: var(--paper-3);
+  letter-spacing: 0.1em;
+  opacity: 0.75;
+  text-align: center;
+}
+
+/* ============ 名局 · 打谱 ============ */
+
+.kf-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px 14px;
+  padding: 13px 16px;
+  background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+}
+.kf-info > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.kf-info span { font-size: 11px; letter-spacing: 0.32em; color: var(--paper-3); }
+.kf-info b {
+  font-weight: 400;
+  font-size: 13.5px;
+  letter-spacing: 0.05em;
+  color: var(--paper-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kf-moveinfo {
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  color: var(--paper);
+  background: rgba(201, 163, 95, 0.06);
+  border-left: 2px solid rgba(201, 163, 95, 0.5);
+  border-radius: 0 8px 8px 0;
+  padding: 10px 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kf-moveinfo em { font-style: normal; color: var(--gold); font-size: 12.5px; }
+
+.kf-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+}
+.kf-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(201, 163, 95, 0.4), rgba(201, 163, 95, 0.12));
+}
+.kf-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(201, 163, 95, 0.4), rgba(201, 163, 95, 0.12));
+}
+.kf-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px; height: 15px;
+  margin-top: -5.5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #fff, #efe8d6 55%, #b6ad96);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55), 0 0 0 3px rgba(201, 163, 95, 0.18);
+}
+.kf-slider::-moz-range-thumb {
+  width: 15px; height: 15px;
+  border: none;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #fff, #efe8d6 55%, #b6ad96);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55), 0 0 0 3px rgba(201, 163, 95, 0.18);
+}
+
+.kf-controls {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 7px;
+}
+.kf-controls .btn { padding: 10px 2px; font-size: 13px; font-family: var(--latin); }
+
+.kf-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 14px;
+  background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+}
+.kf-toolbar .seg-btns { gap: 5px; }
+.kf-toolbar .seg-btns button { padding: 5px 11px; font-size: 12px; }
+.kf-toolbar .switch-row {
+  flex: none;
+  gap: 9px;
+  padding: 0;
+  border-bottom: none;
+  font-size: 13px;
+}
+.kf-tip {
+  font-size: 12px;
+  color: var(--paper-3);
+  letter-spacing: 0.12em;
+  text-align: center;
+  opacity: 0.75;
+}
+
 /* ============ Toast 与弹窗 ============ */
 
 #toast-root {
@@ -944,4 +1171,7 @@ button { font-family: var(--serif); cursor: pointer; }
   .home-menu { gap: 34px; }
   .ls-actions { grid-template-columns: 1fr 1fr; }
   .ls-actions .btn-primary { grid-column: 2; }
+  .kf-result { display: none; }
+  .kf-info { grid-template-columns: 1fr 1fr; }
+  .kf-toolbar { flex-wrap: wrap; }
 }
